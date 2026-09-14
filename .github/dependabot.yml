@@ -39,6 +39,11 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    ignore:
+      # The build image's Go version follows the `go` line in go.mod, which CI also reads. Patch
+      # releases still arrive as digest updates; a new Go release is a deliberate go.mod change.
+      - dependency-name: golang
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   # ultra:end go-service
 
   # ultra:begin ts-service
@@ -67,6 +72,10 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    ignore:
+      # The image's Node major follows .node-version, which CI and every module's engines use.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
   # ultra:end ts-service
 
   # ultra:begin web
@@ -81,6 +90,10 @@ updates:
     groups:
       web:
         patterns: ["*"]
+    ignore:
+      # Same reason as api-ts: @types/node moves with .node-version, never ahead of it.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   # ultra:end web
 
   # ultra:begin architecture
