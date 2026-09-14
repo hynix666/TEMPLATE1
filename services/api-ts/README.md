@@ -20,7 +20,7 @@ npm start
 curl -s localhost:8080/api/tasks -d '{"title":"ship it"}'
 ```
 
-`PORT` (default `8080`) and `SHUTDOWN_TIMEOUT` (default `10s`; also accepts milliseconds such as `500ms`) configure it. The API table is in [`../api-go/README.md`](../api-go/README.md); both services answer it identically.
+`PORT` (default `8080`) and `SHUTDOWN_TIMEOUT` (default `10s`; Go duration syntax with the units `h`, `m`, `s` and `ms`, such as `1m30s`) configure it, with the same rules as `api-go`. The API table is in [`../api-go/README.md`](../api-go/README.md); both services answer it identically.
 
 ## Check
 

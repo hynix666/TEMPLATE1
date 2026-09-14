@@ -8,6 +8,7 @@
  *   src/application  the domain and its own files
  *   src/adapters     the domain, the application, its own files, node: built-ins and packages
  *   src/main.ts and src/config.ts are the composition root and may import anything
+ *   any other file under src/ belongs to no layer, and fails
  *
  * Adapted from NexusPrompt's check-boundaries.mjs. Specifiers are read with a regular expression, not
  * a parser: static import/export-from, side-effect imports and dynamic import() with a string literal.
@@ -30,12 +31,20 @@ export const LAYERS = [
 const IMPORT_RE =
   /(?:^|[\n;])\s*(?:import|export)\b[^'"`;]*?\bfrom\s*["']([^"']+)["']|(?:^|[\n;])\s*import\s*["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
 
+/** The composition root may import anything. Every other file under src/ must belong to a layer. */
+export const COMPOSITION_ROOT = ["src/main.ts", "src/config.ts"];
+
 export const specifiers = (source) => [...source.matchAll(IMPORT_RE)].map((m) => m[1] ?? m[2] ?? m[3]);
 
 /** Violations in one file. `file` is a POSIX path relative to the service root, such as src/domain/task.ts. */
 export function checkFile(file, source) {
   const layer = LAYERS.find((l) => file.startsWith(`${l.dir}/`));
-  if (layer === undefined) return [];
+  if (layer === undefined) {
+    // A file in no layer is a file no rule covers; a new directory must not escape by being new.
+    return COMPOSITION_ROOT.includes(file)
+      ? []
+      : [`${file} belongs to no layer. Move it into ${LAYERS.map((l) => l.dir).join(", ")}, or add a layer with its own allowlist.`];
+  }
   const problems = [];
   for (const spec of specifiers(source)) {
     if (spec.startsWith(".")) {

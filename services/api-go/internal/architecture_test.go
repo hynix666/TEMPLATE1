@@ -23,6 +23,26 @@ var forbidden = map[string][]string{
 	"controller": {"internal/repo", "internal/app", "internal/config", "database/sql"},
 }
 
+// unrestricted lists the internal packages the rule deliberately leaves alone: the composition root
+// and the configuration it reads. Every other package under internal/ must be a layer above, so a new
+// package cannot escape the rule by being new.
+var unrestricted = map[string]bool{"app": true, "config": true}
+
+func TestEveryInternalPackageHasARule(t *testing.T) {
+	t.Parallel()
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, entry := range entries {
+		if _, layer := forbidden[entry.Name()]; entry.IsDir() && !layer && !unrestricted[entry.Name()] {
+			t.Errorf("internal/%s is neither a layer in forbidden nor listed in unrestricted, so no import rule covers it", entry.Name())
+		}
+	}
+}
+
 // violation reports whether layer may not import importPath. A rule matches the package it names
 // and everything below it, never a package that merely shares a prefix: "net" forbids net/http,
 // not a package called network.

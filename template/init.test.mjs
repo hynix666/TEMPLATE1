@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { MODULES } from "../scripts/modules.mjs";
 import {
@@ -90,6 +90,29 @@ test("removed paths cover unselected features and template-only files", () => {
   const removed = removedPaths(loadManifest(), new Set(["web"]));
   assert.ok(removed.includes("template") && removed.includes("services/api-go"));
   assert.ok(!removed.includes("apps/web"));
+});
+
+test("in-place init removes an unselected module whole, ignored files included", (t) => {
+  const copy = mkdtempSync(join(tmpdir(), "init-inplace-"));
+  t.after(() => rmSync(copy, { recursive: true, force: true }));
+  const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8" }).split("\0").filter(Boolean);
+  for (const file of tracked.filter((f) => existsSync(join(ROOT, f)))) {
+    mkdirSync(dirname(join(copy, file)), { recursive: true });
+    copyFileSync(join(ROOT, file), join(copy, file));
+  }
+  const git = (...args) => execFileSync("git", args, { cwd: copy, stdio: "ignore" });
+  git("init", "-q");
+  git("add", "-A");
+  git("-c", "user.name=test", "-c", "user.email=test@example.invalid", "commit", "-q", "-m", "copy");
+  // What the Dev Container's postCreateCommand leaves behind before init runs.
+  mkdirSync(join(copy, "services/api-ts/node_modules/pkg"), { recursive: true });
+  writeFileSync(join(copy, "services/api-ts/node_modules/pkg/index.js"), "");
+
+  execFileSync("node", ["template/init.mjs", "--name", "demo-app", "--owner", "octo", "--preset", "go-api"], { cwd: copy, stdio: "pipe" });
+
+  assert.equal(existsSync(join(copy, "services/api-ts")), false);
+  assert.equal(existsSync(join(copy, "template")), false);
+  assert.equal(existsSync(join(copy, "services/api-go/go.mod")), true);
 });
 
 test("init --out writes a project with no template residue", (t) => {

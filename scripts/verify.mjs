@@ -9,7 +9,7 @@
  * exception is golangci-lint, a linter many machines lack: it is reported as SKIPPED by name, and
  * the go-service CI job always runs it.
  *
- * Exit 0 everything passed · 1 something failed · 2 unknown module name.
+ * Exit 0 everything passed · 1 something failed · 2 a module name that is unknown or not present.
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -63,8 +63,16 @@ if (unknown.length > 0) {
   process.exit(2);
 }
 
+const present = presentModules();
+const absent = requested.filter((id) => !present.some((m) => m.id === id));
+if (absent.length > 0) {
+  // Naming a module that is not here must not print OK after checking only the chassis.
+  console.error(`verify: module(s) ${absent.join(", ")} are not present in this repository.`);
+  process.exit(2);
+}
+
 chassis();
-for (const module of presentModules()) {
+for (const module of present) {
   if (requested.length > 0 && !requested.includes(module.id)) continue;
   if (module.toolchain === "go") goModule(module);
   else nodeModule(module);

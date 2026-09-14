@@ -6,11 +6,11 @@
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { presentModules, run } from "./modules.mjs";
+import { presentModules, ROOT, run } from "./modules.mjs";
 
 let failed = 0;
 for (const module of presentModules()) {
-  const cwd = join(process.cwd(), module.dir);
+  const cwd = join(ROOT, module.dir);
   const [command, args] = module.toolchain === "go"
     ? ["go", ["mod", "download"]]
     : ["npm", [existsSync(join(cwd, "package-lock.json")) ? "ci" : "install"]];

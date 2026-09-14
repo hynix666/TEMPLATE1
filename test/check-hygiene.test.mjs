@@ -88,6 +88,14 @@ test("a verify.yml job missing from the gate's needs fails", () => {
   assert.match(checkGate("verify.yml", "jobs:\n  lint:\n    timeout-minutes: 5\n").join(""), /no aggregate `verify` job/);
 });
 
+test("a repository with nothing tracked is fatal, not vacuously clean", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "hygiene-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(join(root, ".gitignore"), IGNORE);
+  execFileSync("git", ["init", "-q"], { cwd: root, stdio: "ignore" });
+  assert.match(checkRepoHygiene(root).fatal ?? "", /nothing is tracked/);
+});
+
 test("a directory that is not a git repository is fatal", (t) => {
   const root = mkdtempSync(join(tmpdir(), "hygiene-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));

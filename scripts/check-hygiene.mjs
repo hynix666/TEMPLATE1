@@ -24,8 +24,8 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const REQUIRED_IGNORES = ["node_modules/", "dist/", "coverage/", ".env", ".env.*"];
 /** Below this the file was truncated, not edited. */
@@ -137,6 +137,9 @@ export function checkRepoHygiene(root = process.cwd()) {
   } catch (err) {
     return { ok: false, fatal: `cannot list tracked files; is this a git repository? ${String(err.message).split("\n")[0]}` };
   }
+  if (tracked.length === 0) {
+    return { ok: false, fatal: "nothing is tracked yet, so every rule would pass without checking anything. Run `git add -A` first." };
+  }
   const read = (path) => readFileSync(join(root, path), "utf8");
   const present = tracked.filter((p) => existsSync(join(root, p)));
   const failures = [];
@@ -198,7 +201,7 @@ export function checkRepoHygiene(root = process.cwd()) {
 }
 
 function main() {
-  const result = checkRepoHygiene();
+  const result = checkRepoHygiene(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
   if (result.fatal) {
     console.error(`check-hygiene: ${result.fatal}`);
     return 2;

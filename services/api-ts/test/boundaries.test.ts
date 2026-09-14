@@ -24,6 +24,12 @@ test("adapters may use built-ins and packages, but not the composition root", ()
   assert.equal(checkFile("src/adapters/http.ts", 'export { loadConfig } from "../config.ts";').length, 1);
 });
 
+test("a file outside every layer fails, except the composition root", () => {
+  assert.equal(checkFile("src/infrastructure/db.ts", 'import { readFileSync } from "node:fs";').length, 1);
+  assert.equal(checkFile("src/helpers.ts", "export const x = 1;").length, 1);
+  assert.deepEqual(checkFile("src/main.ts", 'import { createServer } from "node:http";'), []);
+});
+
 test("the real source tree has no violations", () => {
   const { files, problems } = checkTree(join(dirname(fileURLToPath(import.meta.url)), ".."));
   assert.ok(files > 0);

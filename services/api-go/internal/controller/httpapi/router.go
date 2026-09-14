@@ -3,9 +3,12 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -141,19 +144,45 @@ func (h handler) transition(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, toResponse(task))
 }
 
+// errNotOneObject rejects bodies that are valid JSON but not exactly one object: `null`, which decodes
+// into a struct without error, and anything after the object, which a Decoder never reads. api-ts
+// refuses both, and the two services must answer alike.
+var errNotOneObject = errors.New("request body must be exactly one JSON object")
+
 // decode reads a size-bounded JSON object, rejecting unknown fields, and writes the error response
 // itself when it cannot.
 func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodyBytes))
-	decoder.DisallowUnknownFields()
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
+	if err == nil {
+		err = decodeObject(raw, dst)
+	}
 
-	if err := decoder.Decode(dst); err != nil {
+	if err != nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "request body must be a JSON object with only the documented fields"})
 
 		return false
 	}
 
 	return true
+}
+
+func decodeObject(raw []byte, dst any) error {
+	if trimmed := bytes.TrimSpace(raw); len(trimmed) == 0 || trimmed[0] != '{' {
+		return errNotOneObject
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(dst); err != nil {
+		return fmt.Errorf("decode request body: %w", err)
+	}
+
+	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
+		return errNotOneObject
+	}
+
+	return nil
 }
 
 // fail maps domain errors to status codes. An unrecognised error is a 500: its detail is logged and
