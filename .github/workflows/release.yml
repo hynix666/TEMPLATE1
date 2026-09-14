@@ -1,0 +1,38 @@
+# release-please keeps an open "release" pull request that collects every Conventional Commit on
+# main since the last release. Merging it tags the release and updates CHANGELOG.md.
+#
+# Two settings a new repository does not inherit:
+#   - Settings → Actions → General: allow GitHub Actions to create and approve pull requests.
+#   - A pull request opened with GITHUB_TOKEN starts no workflow runs, so the required `verify`
+#     check never reports on it. Store a fine-grained token (contents and pull requests: write) as
+#     the RELEASE_PLEASE_TOKEN secret and the release pull request is checked like any other.
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    # ultra:begin template
+    # The template repository itself cuts no releases; projects generated from it do.
+    if: github.event.repository.is_template == false
+    # ultra:end template
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
