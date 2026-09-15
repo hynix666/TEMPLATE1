@@ -37,8 +37,14 @@ Services keep domain, use cases, adapters and a composition root, with dependenc
 <!-- ultra:begin web -->
 ### apps/web
 
-API responses are validated in `src/lib/tasks.ts` before components use them. The dev server proxies `/api` to port 8080.
+Code flows one way: `src/lib` (shared) → `src/features/<name>` → `src/app`. A feature never imports another feature or `src/app`, and `src/app` uses a feature only through its `index.ts`; `scripts/check-boundaries.mjs` enforces it. A new capability is a new feature folder with its own `api.ts`, `model.ts` and `components/`. API responses are validated in the feature's `model.ts` before components use them. Component tests stub `fetch` and render with Testing Library in happy-dom. The dev server proxies `/api` to port 8080.
 <!-- ultra:end web -->
+
+<!-- ultra:begin ts-library -->
+### packages/ts-library
+
+Everything consumers may import is exported from `src/index.ts`; the `exports` map has a single entry, so nothing else is reachable. `isolatedDeclarations` requires explicit types on exports. `npm run verify` builds and then checks the packed tarball with publint and are-the-types-wrong — a change that breaks how the package resolves for consumers fails there, not after publishing. Versions come from release tags; never edit `version` in `package.json` by hand.
+<!-- ultra:end ts-library -->
 
 <!-- ultra:begin architecture -->
 ### architecture
@@ -47,6 +53,10 @@ The LikeC4 model in `architecture/model/` describes the system. Update it in the
 <!-- ultra:end architecture -->
 
 When both services exist, keep them behaviourally identical: the same routes, status codes and configuration variables.
+
+## Skills
+
+Step-by-step procedures for recurring tasks live in `.claude/skills/<name>/SKILL.md`: recording a decision, and adding an endpoint to each service present. Follow the matching skill instead of improvising the procedure.
 
 ## Conventions
 

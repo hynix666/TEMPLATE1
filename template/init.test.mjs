@@ -6,8 +6,24 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { MODULES } from "../scripts/modules.mjs";
 import {
-  applyMarkers, InitError, loadManifest, MARKER_RE, removedPaths, replaceIdentity, resolveSelection, ROOT, validateIdentity, validateManifest,
+  applyMarkers, InitError, loadManifest, MARKER_RE, originDefaults, originIdentity, removedPaths, replaceIdentity, resolveSelection, ROOT,
+  toProjectName, validateIdentity, validateManifest,
 } from "./init.mjs";
+
+test("the template's own remote is never used as the project's identity", () => {
+  const manifest = loadManifest();
+  assert.equal(originDefaults(manifest, "git@github.com:hynix666/ULTRA-TEMPLATE.git"), null);
+  assert.equal(originDefaults(manifest, "https://github.com/HYNIX666/ultra-template"), null);
+  assert.deepEqual(originDefaults(manifest, "git@github.com:octo-org/demo-app.git"), { owner: "octo-org", repo: "demo-app" });
+});
+
+test("the owner and repository default from a GitHub origin remote", () => {
+  assert.deepEqual(originIdentity("git@github.com:octo-org/My.Repo.git"), { owner: "octo-org", repo: "My.Repo" });
+  assert.deepEqual(originIdentity("https://github.com/octo-org/demo-app"), { owner: "octo-org", repo: "demo-app" });
+  assert.equal(originIdentity("https://gitlab.com/octo-org/demo-app.git"), null);
+  assert.equal(originIdentity(""), null);
+  assert.equal(toProjectName("My.Repo__Name"), "my-repo-name");
+});
 
 // Built by concatenation so this file never contains a marker line of its own.
 const begin = (id) => `# ultra:${"begin"} ${id}`;
