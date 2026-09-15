@@ -28,7 +28,7 @@ test("release settings are applied only when the release workflow exists", () =>
 
 test("only plan- or visibility-dependent settings are optional", () => {
   const optional = plan("octo/app", { release: true }).filter((s) => s.optional).map((s) => s.name);
-  assert.deepEqual(optional, ["private vulnerability reporting", "secret scanning and push protection", "secret RELEASE_PLEASE_TOKEN exists"]);
+  assert.deepEqual(optional, ["private vulnerability reporting", "secret scanning and push protection"]);
 });
 
 test("merging is squash-only with the pull request title as the commit title", () => {

@@ -100,7 +100,7 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 - **`security.yml`** — gitleaks over new commits and weekly over history; report-only.
 - **`codeql.yml`** — CodeQL analysis; enable it by setting the repository variable `CODEQL_ENABLED=true` (needs a public repository or GitHub Advanced Security).
 <!-- ultra:begin release -->
-- **`release.yml`** — release-please on `main`, off until `RELEASE_ENABLED=true`, which `configure-github.mjs` sets; its header explains the token it also needs.
+- **`release.yml`** — release-please on `main`, off until `RELEASE_ENABLED=true`, which `configure-github.mjs` sets. Releases start at `0.1.0`, and each release pull request gets a dispatched `verify` run, so it can pass the required check without a personal token.
 <!-- ultra:end release -->
 <!-- ultra:begin architecture -->
 - **`architecture.yml`** — publishes the architecture model to GitHub Pages once `PAGES_ENABLED=true` is set.
