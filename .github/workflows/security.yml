@@ -94,8 +94,8 @@ jobs:
               const out = (s) => appendFileSync(process.env.GITHUB_STEP_SUMMARY, s + "\n");
               let report = null;
               try { report = JSON.parse(readFileSync(process.argv[1], "utf8")); } catch {}
-              // String concatenation, not template literals: shellcheck reads ${...} inside this
-              // single-quoted script as a shell expansion that will never happen.
+              // String concatenation, not template literals: shellcheck reads a dollar-brace inside
+              // this single-quoted script as a shell expansion that will never happen (SC2016).
               if (!report?.metadata) { out("### npm audit could not run in " + process.argv[2]); process.exit(2); }
               const v = report.metadata.vulnerabilities;
               out("### npm audit " + process.argv[2] + ": " + v.total + " advisory(ies), report-only");
