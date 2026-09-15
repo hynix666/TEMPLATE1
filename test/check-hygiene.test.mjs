@@ -88,6 +88,12 @@ test("a verify.yml job missing from the gate's needs fails", () => {
   assert.match(checkGate("verify.yml", "jobs:\n  lint:\n    timeout-minutes: 5\n").join(""), /no aggregate `verify` job/);
 });
 
+test("a raw control character in a source file fails, and an escape does not", (t) => {
+  const found = failures(fixture(t, { "src/raw.mjs": "const sep = \"\u0000\";\n", "src/escaped.mjs": "const sep = \"\\u0000\";\n" }));
+  assert.match(found, /raw control character\(s\) in src\/raw\.mjs:1\./);
+  assert.doesNotMatch(found, /escaped\.mjs/);
+});
+
 test("a repository with nothing tracked is fatal, not vacuously clean", (t) => {
   const root = mkdtempSync(join(tmpdir(), "hygiene-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));

@@ -48,6 +48,13 @@ test("identity replacement never rewrites its own output", () => {
   assert.equal(replaceIdentity(text, from, to), "github.com/octo/hynix666-app module github.com/octo/ultra-template-x @octo");
 });
 
+test("identity placeholders cannot collide with ordinary text such as a digest", () => {
+  const from = { owner: "hynix666", repo: "ULTRA-TEMPLATE", name: "ultra-template" };
+  const to = { owner: "octo", repo: "demo-app", name: "demo-app" };
+  const text = "FROM node@sha256:00000000000000001230000 # hynix666";
+  assert.equal(replaceIdentity(text, from, to), "FROM node@sha256:00000000000000001230000 # octo");
+});
+
 test("selection takes exactly one of preset or features and rejects unknown names", () => {
   const manifest = loadManifest();
   assert.deepEqual([...resolveSelection(manifest, { features: "web, release" })], ["web", "release"]);

@@ -17,6 +17,8 @@
  *      workflow declares `permissions:` and every job a `timeout-minutes`.
  *   9. Every job in verify.yml is listed under the aggregate `verify` job's `needs`. A job left out
  *      still runs and still shows red, but no longer blocks a merge — and nothing says so.
+ *  10. No tracked source or config file contains a raw control character. A raw NUL makes git treat
+ *      the whole file as binary: its diffs collapse to "Bin", so the change is never reviewed.
  *
  *   node scripts/check-hygiene.mjs
  *
@@ -36,6 +38,9 @@ export const MAX_TRACKED_BYTES = 4 * 1024 * 1024;
 export const JSONC = /(^|\/)(tsconfig(\.[\w-]+)?\.json|devcontainer\.json)$|(^|\/)\.vscode\//;
 export const MARKER = /ultra:(?:begin|end)\s+[a-z0-9-]+/;
 
+const TEXT_SOURCE = /\.(mjs|cjs|js|jsx|ts|tsx|mts|go|ya?ml|json|md|c4|css|html)$/;
+// Tab, LF and CR are the only C0 characters text needs; anything else belongs in an escape.
+const CONTROL_CHAR = /[\x00-\x08\x0B\x0C\x0E-\x1F]/;
 const ENV_FILE = /(^|\/)\.env(\.[^/]*)?$/;
 const ENV_EXAMPLE = /(^|\/)\.env\.example$/;
 const WORKFLOW = /^\.github\/(workflows\/[^/]+|actions\/.+\/action)\.ya?ml$/;
@@ -196,6 +201,15 @@ export function checkRepoHygiene(root = process.cwd()) {
   for (const path of present.filter((p) => WORKFLOW.test(p))) failures.push(...checkWorkflow(path, read(path)));
   const gate = ".github/workflows/verify.yml";
   if (present.includes(gate)) failures.push(...checkGate(gate, read(gate)));
+
+  const withControl = [];
+  for (const path of present.filter((p) => TEXT_SOURCE.test(p))) {
+    const line = read(path).split("\n").findIndex((l) => CONTROL_CHAR.test(l));
+    if (line !== -1) withControl.push(`${path}:${line + 1}`);
+  }
+  if (withControl.length > 0) {
+    failures.push(`raw control character(s) in ${withControl.join(", ")}. Write them as escapes such as \\u0000: the value is the same, and the file stays text to git, grep and review.`);
+  }
 
   return { ok: failures.length === 0, failures, trackedCount: tracked.length, ruleCount: rules.length };
 }
