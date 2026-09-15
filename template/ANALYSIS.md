@@ -48,7 +48,7 @@ Nine criteria, each asking whether a property is **enforced by the build**, mere
 
 **Adopted.** Post-copy initialization that personalizes the repository and removes itself, and issue templates that separate bugs, features and security reports.
 
-**Improved.** Its script replaces strings with `sed` across `.github/`, prompts interactively, and offers no stack selection. `template/init.mjs` is non-interactive and scriptable, validates input, selects features, plans in memory before writing, and refuses a dirty tree. Markdown issue templates became GitHub issue forms, and the security "issue template" became a link to private vulnerability reporting — a public issue is the wrong channel for a vulnerability.
+**Improved.** Its script replaces strings with `sed` across `.github/`, prompts interactively, and offers no stack selection. `template/init.mjs` is scriptable with arguments and asks only in a terminal (a v1.1.0 addition, after dotnet-starter-kit's wizard), validates input, selects features, plans in memory before writing, and refuses a dirty tree. Markdown issue templates became GitHub issue forms, and the security "issue template" became a link to private vulnerability reporting — a public issue is the wrong channel for a vulnerability.
 
 **Left out.** Probot configuration (`settings.yml`, `issue_label_bot.yaml`, welcome bots), which depends on apps that are retired or must be installed separately, and 20 opinionated labels.
 
@@ -94,3 +94,21 @@ Nine criteria, each asking whether a property is **enforced by the build**, mere
 - CodeQL and the Pages deployment are opt-in, so the template's own CI does not exercise them while the repository is private.
 - The workflow checks in `check-hygiene` read the two-space YAML layout this repository uses, not arbitrary YAML.
 - `release.yml` needs a token secret for its pull requests to trigger the required check; the workflow header says how.
+
+## Second round: eleven more sources (template v1.1.0)
+
+*Added 15 September 2026.* The second set was read the same way: layout, build and CI, enforcement, agent guidance, and anything a generated project would otherwise have to add by hand.
+
+| Source | Strength | Taken into ULTRA-TEMPLATE | Left out, and why |
+|---|---|---|---|
+| bulletproof-react | Feature folders with one-way imports (shared → features → app), enforced by ESLint; unit, component and end-to-end test layers | `web` reorganised by feature; a dependency-free boundary check with failing cases; Testing Library component tests in happy-dom | Playwright end-to-end tests (a browser download per CI run for a two-screen example), Storybook, plop generators, three app variants |
+| swr | A library published well: `exports` map, are-the-types-wrong on the packed tarball, npm trusted publishing | `ts-library` feature: single `exports` entry, publint and attw on the tarball, tokenless publishing with provenance on release | Dual ESM/CJS builds (Node 24 consumers import ESM), canary and legacy React matrices |
+| dotnet-starter-kit | A setup wizard; a lean AGENTS.md with on-demand rules and task skills; architecture tests; a smoke test that scaffolds from the template | Interactive `init` with defaults read from `origin`; `.claude/skills` for recurring tasks. The smoke test already existed as `template-test.yml` | The product modules (multitenancy, billing, chat), path-filtered CI jobs, Terraform |
+| fastapi-clean-example | Layer contracts with import-linter; `pip-audit` in the check; a test taxonomy by infrastructure need | Dependency vulnerability audits: `npm audit` for every lockfile and govulncheck for Go, report-only | Database, migrations and their stairway test: the services keep an in-memory store until a project chooses one |
+| node.js-clean-architecture | Entities, use cases, adapters and frameworks as separate layers | Already present in both services, with the rules enforced rather than described | Express, MongoDB and Redis |
+| electron-boilerplate | Desktop packaging, auto-update, single-instance lock | Nothing yet | A desktop feature means choosing Electron or Tauri and a signing and update story; that is a product decision, listed as a next step |
+| Best-README-Template, awesome-readme-template | A README a stranger can act on: badges, prerequisites, getting started | A status and licence badge row and a prerequisites list that follows the selected features | Screenshots, roadmap, acknowledgements and contact sections, which only a real project can fill in |
+| Awesome-Repo-Template | Community files and a disclosure process | "What happens after you report" in SECURITY.md | Its workflow that rewrites files with a push token, and Probot bot configuration |
+| awesome-github-templates, awesome-clean-code-projects | Curated lists | Repository topics, so the template is found the way those lists find templates | No code to adopt |
+
+The limitations section above still applies; in addition, publishing to npm cannot be exercised by the template's own CI, because a trusted publisher has to be configured on npmjs.com for a real package first.

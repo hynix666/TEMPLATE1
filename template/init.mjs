@@ -29,6 +29,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createInterface } from "node:readline/promises";
 import { parseArgs } from "node:util";
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -244,12 +245,76 @@ function pruneEmptyParents(root, file) {
   }
 }
 
-const USAGE = `Usage:
-  node template/init.mjs --list
-  node template/init.mjs --name <project> --owner <github-owner> (--preset <preset> | --features <a,b>)
-                         [--repo <repository>] [--out <directory>] [--dry-run]`;
+/** owner and repository from a GitHub remote URL (https or ssh), or null for anything else. */
+export function originIdentity(url) {
+  const match = /github\.com[:/]([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?\/?$/.exec(url ?? "");
+  return match ? { owner: match[1], repo: match[2] } : null;
+}
 
-export function main(argv = process.argv.slice(2), root = ROOT) {
+/**
+ * The origin identity to default from, or null. The template's own remote names the template, not the
+ * project being created, so it is ignored: a clone of ULTRA-TEMPLATE itself (template-test.yml runs init in
+ * one) would otherwise hand the template's repository name and links to the generated project.
+ */
+export function originDefaults(manifest, url) {
+  const origin = originIdentity(url);
+  const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+  if (origin === null || (same(origin.owner, manifest.identity.owner) && same(origin.repo, manifest.identity.repo))) return null;
+  return origin;
+}
+
+/** A repository name as a project name: lowercase, with every other run of characters as one hyphen. */
+export const toProjectName = (repo) => repo.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+function readOrigin(root) {
+  try {
+    return execFileSync("git", ["remote", "get-url", "origin"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Asks for what the command line left out. Only in a terminal: a script or CI that forgets an argument
+ * gets the same error as before rather than a prompt it cannot answer.
+ */
+async function ask(manifest, values) {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const prompt = async (question, fallback) => (await rl.question(fallback ? `${question} [${fallback}]: ` : `${question}: `)).trim() || fallback;
+  try {
+    values.owner = await prompt("GitHub owner", values.owner);
+    values.name = await prompt("Project name", values.name);
+    if (values.preset === undefined && values.features === undefined) {
+      const ids = Object.keys(manifest.features);
+      console.log("\nFeatures:");
+      ids.forEach((id, i) => console.log(`  ${String(i + 1).padStart(2)}. ${id.padEnd(14)} ${manifest.features[id].summary}`));
+      console.log(`\nPresets: ${Object.keys(manifest.presets).join(", ")}`);
+      const answer = (await rl.question("Preset name, or feature numbers such as 1,3 (empty for none): ")).trim();
+      if (Object.hasOwn(manifest.presets, answer)) values.preset = answer;
+      else values.features = answer.split(",").map((part) => ids[Number(part.trim()) - 1] ?? part.trim()).join(",");
+    }
+  } catch (err) {
+    rl.close();
+    throw err;
+  }
+  // The last question comes after the plan is built, so the interface stays open until it is asked.
+  return async (summary) => {
+    try {
+      return /^y(es)?$/i.test((await rl.question(`\n${summary}\nApply? [y/N]: `)).trim());
+    } finally {
+      rl.close();
+    }
+  };
+}
+
+const USAGE = `Usage:
+  node template/init.mjs                     in a terminal: asks for everything the arguments leave out
+  node template/init.mjs --list
+  node template/init.mjs [--name <project>] [--owner <github-owner>] (--preset <preset> | --features <a,b>)
+                         [--repo <repository>] [--out <directory>] [--dry-run]
+  --owner and --repo default to the origin remote, and --name to the repository name.`;
+
+export async function main(argv = process.argv.slice(2), root = ROOT) {
   const { values } = parseArgs({
     args: argv,
     strict: true,
@@ -280,6 +345,17 @@ export function main(argv = process.argv.slice(2), root = ROOT) {
 
   const problems = validateManifest(manifest, (path) => existsSync(join(root, path)));
   if (problems.length > 0) throw new InitError(`The template is inconsistent:\n  ${problems.join("\n  ")}`);
+
+  // A repository created from the template already names its owner and repository in origin.
+  const origin = originDefaults(manifest, readOrigin(root));
+  values.owner ??= origin?.owner;
+  values.repo ??= origin?.repo;
+  values.name ??= origin ? toProjectName(origin.repo) : undefined;
+
+  const interactive = process.stdin.isTTY && process.stdout.isTTY &&
+    (values.preset === undefined && values.features === undefined);
+  const confirm = interactive ? await ask(manifest, values) : null;
+
   const selected = resolveSelection(manifest, values);
   const identity = validateIdentity(values);
 
@@ -294,6 +370,10 @@ export function main(argv = process.argv.slice(2), root = ROOT) {
 
   if (values["dry-run"]) {
     console.log(`Dry run — nothing written.\n${summary}\nDeleted:\n  ${result.deleted.join("\n  ")}`);
+    return 0;
+  }
+  if (confirm !== null && !(await confirm(summary))) {
+    console.log("Nothing written.");
     return 0;
   }
   if (out !== null) {
@@ -323,11 +403,15 @@ Next:
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  try {
-    process.exitCode = main();
-  } catch (err) {
-    console.error(`init: ${err.message}`);
-    if (!(err instanceof InitError)) console.error(USAGE);
-    process.exitCode = err instanceof InitError ? err.code : 1;
-  }
+  main().then(
+    (code) => {
+      process.exitCode = code;
+      process.exit();
+    },
+    (err) => {
+      console.error(`init: ${err.message}`);
+      if (!(err instanceof InitError)) console.error(USAGE);
+      process.exit(err instanceof InitError ? err.code : 1);
+    },
+  );
 }
