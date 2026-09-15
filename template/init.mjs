@@ -302,7 +302,7 @@ Next:
   ${out === null ? "git status                      # review the result" : `cd ${out} && git init -b main && git add -A    # hygiene checks tracked files`}
   node scripts/setup.mjs && node scripts/verify.mjs
   git add -A && git commit -m "chore: initialize project"
-  Settings → Rules: require the "verify" status check on main.`);
+  git push && node scripts/configure-github.mjs   # squash-only merges, required verify check, security settings`);
   return 0;
 }
 

@@ -36,7 +36,11 @@ It combines the strongest ideas of eight templates, including NexusPrompt's own 
    git add -A && git commit -m "chore: initialize project"
    ```
 
-5. Protect `main` under Settings → Rules → Rulesets: require a pull request, require the **`verify`** status check, and allow squash merging only.
+5. Push, then apply the settings GitHub does not copy from a template: squash-only merging, a ruleset on `main` requiring a pull request and the **`verify`** check, Dependabot security updates, private vulnerability reporting and secret scanning. Preview with `--dry-run`; it needs the GitHub CLI signed in as a repository admin.
+
+   ```bash
+   git push && node scripts/configure-github.mjs
+   ```
 
 | Feature | What you get |
 |---|---|
@@ -86,6 +90,7 @@ node scripts/setup.mjs              # install the dependencies of every module p
 node scripts/verify.mjs             # the whole check, as CI runs it
 node scripts/verify.mjs <module>    # the chassis plus the named modules only
 node scripts/check-hygiene.mjs      # repository-shape rules only
+node scripts/configure-github.mjs   # apply repository settings: merging, required check, security
 ```
 
 ## Continuous integration
@@ -95,7 +100,7 @@ node scripts/check-hygiene.mjs      # repository-shape rules only
 - **`security.yml`** — gitleaks over new commits and weekly over history; report-only.
 - **`codeql.yml`** — CodeQL analysis; enable it by setting the repository variable `CODEQL_ENABLED=true` (needs a public repository or GitHub Advanced Security).
 <!-- ultra:begin release -->
-- **`release.yml`** — release-please on `main`; its header lists the two repository settings it needs.
+- **`release.yml`** — release-please on `main`, off until `RELEASE_ENABLED=true`, which `configure-github.mjs` sets; its header explains the token it also needs.
 <!-- ultra:end release -->
 <!-- ultra:begin architecture -->
 - **`architecture.yml`** — publishes the architecture model to GitHub Pages once `PAGES_ENABLED=true` is set.
