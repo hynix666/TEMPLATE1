@@ -8,7 +8,7 @@
     "ghcr.io/devcontainers/features/go:1": { "version": "1.26" },
     // ultra:end go-service
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/node:1": { "version": "24" }
+    "ghcr.io/devcontainers/features/node:2": { "version": "24" }
   },
   "postCreateCommand": "node scripts/setup.mjs",
   "customizations": {
