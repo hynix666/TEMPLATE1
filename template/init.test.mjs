@@ -131,6 +131,11 @@ test("init --out writes a project with no template residue", (t) => {
     assert.equal(existsSync(join(out, gone)), false, gone);
   }
   assert.match(readFileSync(join(out, "LICENSE"), "utf8"), /octo/);
+  const { version } = loadManifest();
+  assert.match(
+    readFileSync(join(out, "CHANGELOG.md"), "utf8"),
+    new RegExp(`## \\[Unreleased\\]\\n\\n- Initialized from \\[ULTRA-TEMPLATE v${version.replaceAll(".", "\\.")}\\]\\(https://github\\.com/hynix666/ULTRA-TEMPLATE/releases/tag/v${version.replaceAll(".", "\\.")}\\) with no features\\.`),
+  );
   assert.match(readFileSync(join(out, "README.md"), "utf8"), /^# demo-app/);
   assert.doesNotMatch(readFileSync(join(out, ".github/workflows/verify.yml"), "utf8"), /ultra:|go-service/);
 });

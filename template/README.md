@@ -44,3 +44,12 @@ cd ../demo-minimal && git init -q && git add -A && node scripts/setup.mjs && nod
 ```
 
 `template/init.test.mjs` checks the marker grammar, identity replacement, argument validation, that the manifest matches the tree, and that an initialized project has no template residue. `.github/workflows/template-test.yml` generates every preset in CI and runs each project's own `setup`, `verify` and actionlint.
+
+## Releasing the template
+
+A repository created from the template has none of its history or tags, so init writes the template's `version` from `features.json` into the new project's `CHANGELOG.md`, linking to the matching release. That line is how a project later tells which template changes it already has. To release:
+
+1. Bump `version` in `features.json` in the pull request that completes the change (semantic versioning: a new feature is a minor bump, a change a project must adapt to is a major one).
+2. After it merges: `gh release create v<version> --generate-notes`.
+
+The template repository runs no release-please of its own: `RELEASE_ENABLED` stays unset here, because releasing is for projects generated from it.

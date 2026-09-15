@@ -57,6 +57,7 @@ export function loadManifest(root = ROOT) {
 /** Every inconsistency in the manifest, as messages. Empty means usable. */
 export function validateManifest(manifest, exists) {
   const problems = [];
+  if (!/^\d+\.\d+\.\d+$/.test(manifest.version ?? "")) problems.push(`version "${manifest.version}" is not MAJOR.MINOR.PATCH.`);
   for (const [id, feature] of Object.entries(manifest.features)) {
     if (id === TEMPLATE_ONLY_ID || !/^[a-z0-9-]+$/.test(id)) problems.push(`"${id}" is not a usable feature id.`);
     for (const path of feature.paths) {
@@ -181,6 +182,20 @@ export function replaceIdentity(text, from, to) {
   return result;
 }
 
+/**
+ * Records which template release, and which features, a project started from. A repository created from
+ * a template has none of its history or tags, so without this line nobody can tell later which template
+ * changes a project already has. Added after identity replacement, so the link keeps naming the template.
+ */
+export function recordOrigin(changelog, manifest, selected, file = "CHANGELOG.md") {
+  const heading = "## [Unreleased]";
+  if (!changelog.includes(heading)) throw new InitError(`${file} has no "${heading}" heading to record the template version under.`);
+  const { owner, repo } = manifest.identity;
+  const tag = `v${manifest.version}`;
+  const features = [...selected].join(", ") || "no features";
+  return changelog.replace(heading, `${heading}\n\n- Initialized from [${repo} ${tag}](https://github.com/${owner}/${repo}/releases/tag/${tag}) with ${features}.`);
+}
+
 function gitTracked(root) {
   try {
     return execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
@@ -215,7 +230,8 @@ export function plan(root, manifest, selected, identity) {
       continue;
     }
     const text = bytes.toString("utf8");
-    const next = replaceIdentity(applyMarkers(text, selected, known, file), manifest.identity, identity);
+    let next = replaceIdentity(applyMarkers(text, selected, known, file), manifest.identity, identity);
+    if (file === "CHANGELOG.md") next = recordOrigin(next, manifest, selected, file);
     result.files.push({ file, data: next, changed: next !== text });
   }
   return result;
