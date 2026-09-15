@@ -19,7 +19,8 @@
  *   - Secret scanning and push protection. Free on public repositories; GitHub refuses them on a private
  *     repository without Advanced Security, and that is reported as unavailable rather than as a failure.
  *   - Only when release.yml exists and init has run (template/ is gone): GitHub Actions may open pull
- *     requests, and RELEASE_ENABLED=true turns the release workflow on.
+ *     requests, and RELEASE_ENABLED=true turns the release workflow on. It also reports when the
+ *     RELEASE_PLEASE_TOKEN secret is missing, which it cannot create for you.
  *
  * Exit 0 applied · 1 a required setting failed · 2 invalid arguments or no usable `gh`.
  */
@@ -107,6 +108,9 @@ export function plan(repo, { release }) {
         body: { default_workflow_permissions: "read", can_approve_pull_request_reviews: true },
       },
       { name: "repository variable RELEASE_ENABLED=true", upsertVariable: { name: "RELEASE_ENABLED", value: "true" } },
+      // A pull request opened with GITHUB_TOKEN starts no workflows, so without this secret every release
+      // pull request waits forever for the required verify check. Only a secret's name can be read back.
+      { name: "secret RELEASE_PLEASE_TOKEN exists", requireSecret: "RELEASE_PLEASE_TOKEN", optional: true },
     );
   }
   return steps;
@@ -129,6 +133,11 @@ function apply(repo, step) {
     const existing = gh("GET", `${r}/rulesets`).find((ruleset) => ruleset.name === step.upsertRuleset.name);
     if (existing) gh("PUT", `${r}/rulesets/${existing.id}`, step.upsertRuleset);
     else gh("POST", `${r}/rulesets`, step.upsertRuleset);
+  } else if (step.requireSecret) {
+    const names = gh("GET", `${r}/actions/secrets`).secrets.map((s) => s.name);
+    if (!names.includes(step.requireSecret)) {
+      throw new Error(`missing, so release pull requests get no verify run and stay blocked; add a fine-grained token (contents and pull requests: write) with: gh secret set ${step.requireSecret}`);
+    }
   } else if (step.upsertVariable) {
     const { name } = step.upsertVariable;
     const exists = gh("GET", `${r}/actions/variables`).variables.some((v) => v.name === name);
@@ -164,7 +173,10 @@ function main() {
   if (values["dry-run"]) {
     console.log(`configure-github: dry run for ${repo}; nothing is changed.\n`);
     for (const step of steps) {
-      const request = step.upsertRuleset ? `upsert repos/${repo}/rulesets` : step.upsertVariable ? `upsert repos/${repo}/actions/variables` : `${step.method} ${step.path}`;
+      const request = step.upsertRuleset ? `upsert repos/${repo}/rulesets`
+        : step.upsertVariable ? `upsert repos/${repo}/actions/variables`
+          : step.requireSecret ? `read repos/${repo}/actions/secrets`
+            : `${step.method} ${step.path}`;
       console.log(`  ${step.name}${step.optional ? " (optional)" : ""}\n    ${request}${step.body ? ` ${JSON.stringify(step.body)}` : ""}`);
     }
     return 0;
