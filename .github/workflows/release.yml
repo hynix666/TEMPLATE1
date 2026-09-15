@@ -82,7 +82,7 @@ jobs:
           node-version-file: .node-version
           registry-url: https://registry.npmjs.org
       - name: npm supports trusted publishing
-        run: node -e 'const [a, b, c] = process.argv[1].split(".").map(Number); if (a < 11 || (a === 11 && (b < 5 || (b === 5 && c < 1)))) { console.error(`npm ${process.argv[1]} is older than 11.5.1, which trusted publishing needs`); process.exit(1); }' "$(npm --version)"
+        run: node -e 'const [a, b, c] = process.argv[1].split(".").map(Number); if (a < 11 || (a === 11 && (b < 5 || (b === 5 && c < 1)))) { console.error("npm " + process.argv[1] + " is older than 11.5.1, which trusted publishing needs"); process.exit(1); }' "$(npm --version)"
       - run: npm ci
       - name: Set the version from the release tag
         env:
