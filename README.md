@@ -17,7 +17,7 @@ It combines the strongest ideas of nineteen templates and references, including 
 
 ## Start a project
 
-1. On GitHub: **Use this template → Create a new repository**. Clone it.
+1. **[Use this template](https://github.com/hynix666/ULTRA-TEMPLATE/generate)** to create a new repository, then clone it.
 2. List the features and presets:
 
    ```bash
