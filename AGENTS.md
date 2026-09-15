@@ -12,7 +12,7 @@ Instructions for coding agents working in this repository. `CLAUDE.md` imports t
 
 Each of these fails `scripts/check-hygiene.mjs` or a module's own checks. Do not work around one; if it is wrong, change it deliberately and say why.
 
-- **One required check.** Branch protection requires only the `verify` job in `.github/workflows/verify.yml`. A new CI job must also be listed under `verify.needs`.
+- **One required check.** The ruleset `scripts/configure-github.mjs` creates requires only the `verify` job in `.github/workflows/verify.yml`. A new CI job must also be listed under `verify.needs`.
 - **Pinned supply chain.** Every third-party `uses:` is a 40-character commit SHA followed by `# vX.Y.Z`. Resolve the SHA from the release tag (`gh api repos/OWNER/REPO/commits/TAG --jq .sha`); never copy one from memory. Binaries downloaded in CI are checksum-verified, and container base images carry a digest. See [ADR-0003](docs/adr/0003-pin-third-party-code.md).
 - **Least privilege in workflows.** Top-level `permissions: contents: read`, widened per job only where needed. Every job has `timeout-minutes`. Event values such as branch names reach shell scripts through `env:`, never as `${{ }}` inside `run:`.
 - **Repository shape.** No `.env` files, no dependency directories, no file over 4 MB, no invalid JSON, nothing both tracked and ignored.
