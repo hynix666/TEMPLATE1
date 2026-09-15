@@ -1,4 +1,4 @@
-# ULTRA-TEMPLATE
+# TEMPLATE1
 
 [![verify](https://github.com/hynix666/ULTRA-TEMPLATE/actions/workflows/verify.yml/badge.svg)](https://github.com/hynix666/ULTRA-TEMPLATE/actions/workflows/verify.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
