@@ -38,7 +38,9 @@ export function layerOf(file) {
   if (file.startsWith("src/app/")) {
     return {
       name: "src/app",
-      may: (t) => t.startsWith("src/app/") || t.startsWith("src/lib/") || /^src\/features\/[^/]+\/index\.tsx?$/.test(t),
+      // `../features/tasks`, `../features/tasks/index` and `../features/tasks/index.ts` all resolve to the
+      // feature's index.ts under bundler resolution; anything deeper in the folder is private.
+      may: (t) => t.startsWith("src/app/") || t.startsWith("src/lib/") || /^src\/features\/[^/]+(\/index(\.tsx?)?)?$/.test(t),
       allowed: "src/app/, src/lib/, and src/features/<name>/index.ts",
     };
   }

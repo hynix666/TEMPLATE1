@@ -12,8 +12,11 @@ describe("check-boundaries", () => {
   });
 
   it("lets the app use a feature only through its index", () => {
-    expect(checkFile("src/app/app.tsx", 'import { TaskBoard } from "../features/tasks/index.ts";')).toEqual([]);
+    for (const spec of ["../features/tasks", "../features/tasks/index", "../features/tasks/index.ts"]) {
+      expect(checkFile("src/app/app.tsx", `import { TaskBoard } from "${spec}";`), spec).toEqual([]);
+    }
     expect(checkFile("src/app/app.tsx", 'import { TaskBoard } from "../features/tasks/components/task-board.tsx";')).toHaveLength(1);
+    expect(checkFile("src/app/app.tsx", 'import { listTasks } from "../features/tasks/api";')).toHaveLength(1);
   });
 
   it("keeps shared code free of features and the app", () => {
