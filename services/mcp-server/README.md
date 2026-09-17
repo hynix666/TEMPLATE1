@@ -2,7 +2,7 @@
 
 An [MCP](https://modelcontextprotocol.io) server that gives an AI assistant three tools over the task API: `list_tasks`, `create_task` and `move_task`. It speaks the protocol over stdio, so a client starts it as a subprocess.
 
-It is the same architecture as the services beside it, with the transport changed: `src/domain` holds the rules, `src/application` the use cases behind an outbound port, `src/adapters` the two things that touch the outside world — the HTTP client that calls the task API, and the MCP layer that publishes the use cases as tools — and `src/main.ts` wires them. `npm run check:boundaries` fails the build when a layer reaches past its allowlist.
+It is the same architecture as the services beside it, with the transport changed ([ADR-0007](../../docs/adr/0007-mcp-server-as-an-adapter.md)): `src/domain` holds the rules, `src/application` the use cases behind an outbound port, `src/adapters` the two things that touch the outside world — the HTTP client that calls the task API, and the MCP layer that publishes the use cases as tools — and `src/main.ts` wires them. `npm run check:boundaries` fails the build when a layer reaches past its allowlist.
 
 The rules are repeated here rather than imported from another module ([ADR-0004](../../docs/adr/0004-independent-modules.md)), and they earn their place: an illegal status move is refused here, with the legal moves named, instead of reaching the model as a 409 it usually retries.
 
