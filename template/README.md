@@ -20,7 +20,7 @@ It has no dependencies beyond Node 24, validates every argument before touching 
 // ultra:begin FEATURE         (JSONC, LikeC4, TypeScript)
 ```
 
-(`FEATURE` is written in capitals here so this page contains no real marker.) When the feature is selected, the marker lines are deleted and the content between them is kept; otherwise both go. The id `template` is reserved and always removed. Blocks cannot nest, and an unknown id, an unclosed block or a mismatched end stops init before any file is written. After initialization `scripts/check-hygiene.mjs` fails if a marker line survives.
+(`FEATURE` is written in capitals here so this page contains no real marker.) The keyword is `ultra`, fixed by the grammar rather than named after the project; no initialized project contains it. When the feature is selected, the marker lines are deleted and the content between them is kept; otherwise both go. The id `template` is reserved and always removed. Blocks cannot nest, and an unknown id, an unclosed block or a mismatched end stops init before any file is written. After initialization `scripts/check-hygiene.mjs` fails if a marker line survives.
 
 Strict JSON has no comments, so JSON files carry no markers; a feature that needs a JSON file owns the whole file as a path. A block can depend on one feature only; content that should appear only when two features are both selected cannot be expressed, and is avoided by design (the architecture model links each service to the user rather than to the web app).
 
