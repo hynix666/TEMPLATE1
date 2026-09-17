@@ -112,3 +112,20 @@ Nine criteria, each asking whether a property is **enforced by the build**, mere
 | awesome-github-templates, awesome-clean-code-projects | Curated lists | Repository topics, so the template is found the way those lists find templates | No code to adopt |
 
 The limitations section above still applies; in addition, publishing to npm cannot be exercised by the template's own CI, because a trusted publisher has to be configured on npmjs.com for a real package first.
+
+## Third round: six more sources (template v1.2.0)
+
+*Added 17 September 2026.* This set was read for one question: what does a repository need in order to be worked on by coding agents as well as by people, and what of that belongs in a template rather than in a project.
+
+| Source | Strength | Taken into TEMPLATE1 | Left out, and why |
+|---|---|---|---|
+| likec4 (the tool's own repository) | A large model kept honest by its own build: the model is code, and CI fails on a model that no longer parses or breaks a rule | Already present as the `architecture` feature; this round confirmed the shape rather than changing it — rules as plain functions, each with a test that breaks it | Its monorepo build, documentation site and playground: tool development, not template concerns |
+| modelcontextprotocol (specification and TypeScript SDK) | A protocol with a stable shape for exposing capability to a model: tools with declared schemas, results that separate a failure the caller can act on from a protocol error | The `mcp-server` feature, on SDK v2: tools declared with Zod schemas, failures returned as `isError`, the server driven in tests through a real client over an in-memory transport pair | The other server features — resources, prompts, sampling, elicitation, HTTP transports and OAuth. One transport and three tools show the pattern; each addition is another `registerTool` behind the same port |
+| MCP-Platform | Catalogues and deploys many MCP servers behind one gateway | Nothing directly. It answers a question a template cannot: which servers an organisation runs. What it argued for is that a server should be a plain subprocess with configuration from the environment, which is what the feature is | The gateway, the registry and the Docker/Kubernetes deployment layer: a platform is a product |
+| gemini-docs-template | Vendor-specific agent instructions (`GEMINI.md`) kept beside the code | `GEMINI.md`, but as a pointer rather than a copy | Its instructions themselves, which are for a different project |
+| github-copilot-agent-template | `.github/copilot-instructions.md`, and instructions written for an agent that opens pull requests | `.github/copilot-instructions.md`, also as a pointer | Its workflow-driven agent setup, which assumes a Copilot subscription and a particular review process |
+| custom-agents-template | A directory of role-shaped agent definitions with frontmatter, selected by name and description | The frontmatter discipline, applied to the skills that were already here: `scripts/check-docs.mjs` fails a `SKILL.md` whose name does not match its directory or whose description is missing or over the length a loader accepts | The roles themselves (architect, reviewer, tester …). A repository's procedures are its own; the template ships the ones its own modules need |
+
+**The decision the vendor files forced.** Three assistants, three filenames, and nothing in any of them saying which is current. Rather than maintain three copies, `AGENTS.md` stays the only instructions, `CLAUDE.md` is the import line, and the other two are pointers a check keeps short — so the failure mode that matters, four files quietly disagreeing, cannot survive a build.
+
+**What the MCP feature is architecturally.** It is a second inbound adapter over the same domain, with the API behind an outbound port: the transport changed and nothing else did. That is the claim this template makes about its structure, and shipping a third module that obeys it is the only way to show the claim holds.

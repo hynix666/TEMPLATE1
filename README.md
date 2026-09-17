@@ -5,13 +5,14 @@
 <!-- ultra:begin template -->
 **A GitHub repository template that starts a project with the verification, supply-chain and architecture discipline most projects only add after their first incident — and lets you choose the stack.**
 
-It combines the strongest ideas of nineteen templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
+It combines the strongest ideas of twenty-five templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
 
 - **One gate.** `node scripts/verify.mjs` runs what CI runs, and CI reports a single required check, `verify`.
 - **A pinned supply chain the build enforces.** Actions pinned to commit SHAs, checksum-verified binaries, digest-pinned images.
 - **Repository hygiene checks.** A tracked `.env`, a vendored `node_modules`, a truncated `.gitignore`, a 50 MB blob, or a CI job left out of the gate each fail the build.
 - **Clean Architecture services whose layer rules are tests**, in Go and TypeScript, with identical APIs.
 - **A feature-sliced web app and a publishable library**, each with its import or packaging rules checked.
+- **An MCP server for agents**, built on the official SDK and tested through a real client, not a mock.
 - **Architecture as code.** A LikeC4 model with rules checked in CI.
 - **One set of instructions for agents.** `AGENTS.md` is the only copy; `CLAUDE.md`, `GEMINI.md` and Copilot's file point at it, and a check fails when one starts saying something else.
 - **Selectable features, tested.** CI generates a project from every preset and runs that project's own checks.
@@ -50,6 +51,7 @@ It combines the strongest ideas of nineteen templates and references, including 
 |---|---|
 | `go-service` | Go HTTP service in Clean Architecture layers, standard library only; a test enforces the layer rules; golangci-lint; distroless image |
 | `ts-service` | TypeScript HTTP service run directly by Node 24; pure domain core; import boundaries checked on every file; no runtime dependencies |
+| `mcp-server` | MCP server on the official SDK: task tools over stdio for an AI assistant, same layers, driven in tests by a real client |
 | `web` | React + Vite app organised by feature (bulletproof-react), import boundaries checked on every file, unit and component tests |
 | `ts-library` | TypeScript library for npm: one `exports` entry, publint and are-the-types-wrong checks on the packed tarball, tokenless trusted publishing with provenance |
 | `architecture` | LikeC4 model of the system, with model rules as tests and an opt-in GitHub Pages site |
@@ -62,6 +64,7 @@ It combines the strongest ideas of nineteen templates and references, including 
 | `go-api` | `go-service`, `architecture`, `release`, `devcontainer` |
 | `fullstack-ts` | `ts-service`, `web`, `architecture`, `release`, `devcontainer` |
 | `library` | `ts-library`, `release`, `devcontainer` |
+| `mcp` | `mcp-server`, `release`, `devcontainer` |
 | `all` | every feature |
 
 Init deletes the features you did not select, keeps or removes the marked blocks in shared files such as workflows and this README, replaces the template's name and owner with yours, and deletes itself. [template/README.md](template/README.md) explains the mechanism and how to add a feature.
@@ -78,6 +81,9 @@ Init deletes the features you did not select, keeps or removes the marked blocks
 <!-- ultra:begin ts-service -->
 - `services/api-ts/` — TypeScript task API with a pure domain core. [README](services/api-ts/README.md)
 <!-- ultra:end ts-service -->
+<!-- ultra:begin mcp-server -->
+- `services/mcp-server/` — MCP server exposing the task API to an AI assistant. [README](services/mcp-server/README.md)
+<!-- ultra:end mcp-server -->
 <!-- ultra:begin web -->
 - `apps/web/` — React single-page app, organised by feature. [README](apps/web/README.md)
 <!-- ultra:end web -->
