@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hynix666/ultra-template/services/api-go/internal/entity"
-	"github.com/hynix666/ultra-template/services/api-go/internal/usecase"
+	"github.com/hynix666/template1/services/api-go/internal/entity"
+	"github.com/hynix666/template1/services/api-go/internal/usecase"
 )
 
 var (

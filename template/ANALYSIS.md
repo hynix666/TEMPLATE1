@@ -1,4 +1,4 @@
-# Template analysis: what ULTRA-TEMPLATE takes from each source, and why
+# Template analysis: what TEMPLATE1 takes from each source, and why
 
 *Written 15 September 2026, from the extracted archives and the NexusPrompt repository at commit `4ada481`.*
 
@@ -99,7 +99,7 @@ Nine criteria, each asking whether a property is **enforced by the build**, mere
 
 *Added 15 September 2026.* The second set was read the same way: layout, build and CI, enforcement, agent guidance, and anything a generated project would otherwise have to add by hand.
 
-| Source | Strength | Taken into ULTRA-TEMPLATE | Left out, and why |
+| Source | Strength | Taken into TEMPLATE1 | Left out, and why |
 |---|---|---|---|
 | bulletproof-react | Feature folders with one-way imports (shared → features → app), enforced by ESLint; unit, component and end-to-end test layers | `web` reorganised by feature; a dependency-free boundary check with failing cases; Testing Library component tests in happy-dom | Playwright end-to-end tests (a browser download per CI run for a two-screen example), Storybook, plop generators, three app variants |
 | swr | A library published well: `exports` map, are-the-types-wrong on the packed tarball, npm trusted publishing | `ts-library` feature: single `exports` entry, publint and attw on the tarball, tokenless publishing with provenance on release | Dual ESM/CJS builds (Node 24 consumers import ESM), canary and legacy React matrices |

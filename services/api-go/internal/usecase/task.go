@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hynix666/ultra-template/services/api-go/internal/entity"
+	"github.com/hynix666/template1/services/api-go/internal/entity"
 )
 
 // TaskRepository is the storage port. Get returns entity.ErrNotFound for a missing task.
