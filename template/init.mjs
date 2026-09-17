@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Turns ULTRA-TEMPLATE into a project that contains only the features you select.
+ * Turns TEMPLATE1 into a project that contains only the features you select.
  *
  * GitHub's "Use this template" copies every file and takes no parameters, so selection happens
  * here, once, on your machine. It cannot happen in a GitHub Actions run on the new repository: a
@@ -253,7 +253,7 @@ export function originIdentity(url) {
 
 /**
  * The origin identity to default from, or null. The template's own remote names the template, not the
- * project being created, so it is ignored: a clone of ULTRA-TEMPLATE itself (template-test.yml runs init in
+ * project being created, so it is ignored: a clone of TEMPLATE1 itself (template-test.yml runs init in
  * one) would otherwise hand the template's repository name and links to the generated project.
  */
 export function originDefaults(manifest, url) {

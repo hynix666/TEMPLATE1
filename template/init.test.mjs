@@ -12,8 +12,8 @@ import {
 
 test("the template's own remote is never used as the project's identity", () => {
   const manifest = loadManifest();
-  assert.equal(originDefaults(manifest, "git@github.com:hynix666/ULTRA-TEMPLATE.git"), null);
-  assert.equal(originDefaults(manifest, "https://github.com/HYNIX666/ultra-template"), null);
+  assert.equal(originDefaults(manifest, "git@github.com:hynix666/TEMPLATE1.git"), null);
+  assert.equal(originDefaults(manifest, "https://github.com/HYNIX666/template1"), null);
   assert.deepEqual(originDefaults(manifest, "git@github.com:octo-org/demo-app.git"), { owner: "octo-org", repo: "demo-app" });
 });
 
@@ -58,14 +58,14 @@ test("malformed markers throw instead of deleting the rest of the file", () => {
 });
 
 test("identity replacement never rewrites its own output", () => {
-  const from = { owner: "hynix666", repo: "ULTRA-TEMPLATE", name: "ultra-template" };
-  const to = { owner: "octo", repo: "hynix666-app", name: "ultra-template-x" };
-  const text = "github.com/hynix666/ULTRA-TEMPLATE module github.com/hynix666/ultra-template @hynix666";
-  assert.equal(replaceIdentity(text, from, to), "github.com/octo/hynix666-app module github.com/octo/ultra-template-x @octo");
+  const from = { owner: "hynix666", repo: "TEMPLATE1", name: "template1" };
+  const to = { owner: "octo", repo: "hynix666-app", name: "template1-x" };
+  const text = "github.com/hynix666/TEMPLATE1 module github.com/hynix666/template1 @hynix666";
+  assert.equal(replaceIdentity(text, from, to), "github.com/octo/hynix666-app module github.com/octo/template1-x @octo");
 });
 
 test("identity placeholders cannot collide with ordinary text such as a digest", () => {
-  const from = { owner: "hynix666", repo: "ULTRA-TEMPLATE", name: "ultra-template" };
+  const from = { owner: "hynix666", repo: "TEMPLATE1", name: "template1" };
   const to = { owner: "octo", repo: "demo-app", name: "demo-app" };
   const text = "FROM node@sha256:00000000000000001230000 # hynix666";
   assert.equal(replaceIdentity(text, from, to), "FROM node@sha256:00000000000000001230000 # octo");
@@ -150,7 +150,7 @@ test("init --out writes a project with no template residue", (t) => {
   const { version } = loadManifest();
   assert.match(
     readFileSync(join(out, "CHANGELOG.md"), "utf8"),
-    new RegExp(`## \\[Unreleased\\]\\n\\n- Initialized from \\[ULTRA-TEMPLATE v${version.replaceAll(".", "\\.")}\\]\\(https://github\\.com/hynix666/ULTRA-TEMPLATE/releases/tag/v${version.replaceAll(".", "\\.")}\\) with no features\\.`),
+    new RegExp(`## \\[Unreleased\\]\\n\\n- Initialized from \\[TEMPLATE1 v${version.replaceAll(".", "\\.")}\\]\\(https://github\\.com/hynix666/TEMPLATE1/releases/tag/v${version.replaceAll(".", "\\.")}\\) with no features\\.`),
   );
   assert.match(readFileSync(join(out, "README.md"), "utf8"), /^# demo-app/);
   assert.doesNotMatch(readFileSync(join(out, ".github/workflows/verify.yml"), "utf8"), /ultra:|go-service/);

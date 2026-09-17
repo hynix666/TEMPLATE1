@@ -5,7 +5,7 @@ model {
     description 'Someone who keeps track of their work as tasks.'
   }
 
-  product = system 'ultra-template' {
+  product = system 'template1' {
     description 'Tasks created, listed and moved through todo, in progress and done.'
 
     // ultra:begin web

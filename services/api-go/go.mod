@@ -1,3 +1,3 @@
-module github.com/hynix666/ultra-template/services/api-go
+module github.com/hynix666/template1/services/api-go
 
 go 1.26

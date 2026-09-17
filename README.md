@@ -1,6 +1,6 @@
-# ULTRA-TEMPLATE
+# TEMPLATE1
 
-[![verify](https://github.com/hynix666/ULTRA-TEMPLATE/actions/workflows/verify.yml/badge.svg)](https://github.com/hynix666/ULTRA-TEMPLATE/actions/workflows/verify.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![verify](https://github.com/hynix666/TEMPLATE1/actions/workflows/verify.yml/badge.svg)](https://github.com/hynix666/TEMPLATE1/actions/workflows/verify.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <!-- ultra:begin template -->
 **A GitHub repository template that starts a project with the verification, supply-chain and architecture discipline most projects only add after their first incident — and lets you choose the stack.**
@@ -17,7 +17,7 @@ It combines the strongest ideas of nineteen templates and references, including 
 
 ## Start a project
 
-1. **[Use this template](https://github.com/hynix666/ULTRA-TEMPLATE/generate)** to create a new repository, then clone it.
+1. **[Use this template](https://github.com/hynix666/TEMPLATE1/generate)** to create a new repository, then clone it.
 2. List the features and presets:
 
    ```bash
