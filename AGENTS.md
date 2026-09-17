@@ -35,6 +35,12 @@ Services keep domain, use cases, adapters and a composition root, with dependenc
 `src/domain` is pure: no `node:` imports and no packages. `src/application` depends on the domain and its own ports, `src/adapters` implement them, and `src/main.ts` is the composition root. `scripts/check-boundaries.mjs` enforces it. Node runs the sources directly, so use only erasable TypeScript syntax: no `enum`, `namespace` or constructor parameter properties.
 <!-- ultra:end ts-service -->
 
+<!-- ultra:begin mcp-server -->
+### services/mcp-server
+
+The same layers as the services, with MCP as the transport: `src/domain` is pure, `src/application` holds the use cases behind the `TaskGateway` port, `src/adapters` holds the HTTP client and the MCP registration, and `src/main.ts` wires them. **Nothing writes to stdout** — it is the protocol channel. A failure the caller can act on is returned as `isError: true`, never thrown. Tools are tested through a real client over an in-memory transport pair. Follow the `add-mcp-tool` skill.
+<!-- ultra:end mcp-server -->
+
 <!-- ultra:begin web -->
 ### apps/web
 

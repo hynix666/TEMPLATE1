@@ -15,6 +15,7 @@ export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const MODULES = [
   { id: "go-service", dir: "services/api-go", toolchain: "go" },
   { id: "ts-service", dir: "services/api-ts", toolchain: "node" },
+  { id: "mcp-server", dir: "services/mcp-server", toolchain: "node" },
   { id: "web", dir: "apps/web", toolchain: "node" },
   { id: "ts-library", dir: "packages/ts-library", toolchain: "node" },
   { id: "architecture", dir: "architecture", toolchain: "node" },
