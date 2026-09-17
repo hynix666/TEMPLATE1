@@ -17,6 +17,7 @@ Each of these fails `scripts/check-hygiene.mjs` or a module's own checks. Do not
 - **Least privilege in workflows.** Top-level `permissions: contents: read`, widened per job only where needed. Every job has `timeout-minutes`. Event values such as branch names reach shell scripts through `env:`, never as `${{ }}` inside `run:`.
 - **Repository shape.** No `.env` files, no dependency directories, no file over 4 MB, no invalid JSON, nothing both tracked and ignored.
 - **Independent modules.** Every module has its own manifest, lockfile and CI job. Never import across module directories ([ADR-0004](docs/adr/0004-independent-modules.md)).
+- **One set of instructions.** This file is the only one. `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` point here and carry no rules of their own, and every document under `docs/` is linked from the index beside it. `scripts/check-docs.mjs` enforces both.
 
 ## Architecture
 
@@ -57,6 +58,10 @@ When both services exist, keep them behaviourally identical: the same routes, st
 ## Skills
 
 Step-by-step procedures for recurring tasks live in `.claude/skills/<name>/SKILL.md`: recording a decision, and adding an endpoint to each service present. Follow the matching skill instead of improvising the procedure.
+
+## Documentation
+
+Write instructions here, decisions in `docs/adr/`, and anything about one module in that module's README. Before adding a page under `docs/`, read [docs/README.md](docs/README.md): it is the index, and its rules say to revise the page that already covers the subject rather than adding a second one, and to add a new page to its index in the same change.
 
 ## Conventions
 

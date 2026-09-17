@@ -13,6 +13,7 @@ It combines the strongest ideas of nineteen templates and references, including 
 - **Clean Architecture services whose layer rules are tests**, in Go and TypeScript, with identical APIs.
 - **A feature-sliced web app and a publishable library**, each with its import or packaging rules checked.
 - **Architecture as code.** A LikeC4 model with rules checked in CI.
+- **One set of instructions for agents.** `AGENTS.md` is the only copy; `CLAUDE.md`, `GEMINI.md` and Copilot's file point at it, and a check fails when one starts saying something else.
 - **Selectable features, tested.** CI generates a project from every preset and runs that project's own checks.
 
 ## Start a project
@@ -70,7 +71,7 @@ Init deletes the features you did not select, keeps or removes the marked blocks
 
 ## Layout
 
-- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs the whole check, `check-hygiene.mjs` guards the repository's shape.
+- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs the whole check, `check-hygiene.mjs` guards the repository's shape, `check-docs.mjs` its documentation.
 <!-- ultra:begin go-service -->
 - `services/api-go/` — Go task API in Clean Architecture layers. [README](services/api-go/README.md)
 <!-- ultra:end go-service -->
@@ -86,7 +87,7 @@ Init deletes the features you did not select, keeps or removes the marked blocks
 <!-- ultra:begin architecture -->
 - `architecture/` — LikeC4 model of the system. [README](architecture/README.md)
 <!-- ultra:end architecture -->
-- `docs/adr/` — architecture decision records.
+- `docs/` — [the documentation index](docs/README.md) and the rules for keeping it true; `docs/adr/` holds the architecture decision records.
 - `.claude/skills/` — step-by-step procedures coding agents follow for recurring tasks.
 - `.github/` — workflows, issue forms, pull request template, Dependabot and code owners.
 
@@ -105,6 +106,7 @@ node scripts/setup.mjs              # install the dependencies of every module p
 node scripts/verify.mjs             # the whole check, as CI runs it
 node scripts/verify.mjs <module>    # the chassis plus the named modules only
 node scripts/check-hygiene.mjs      # repository-shape rules only
+node scripts/check-docs.mjs         # agent instructions and the docs index
 node scripts/configure-github.mjs   # apply repository settings: merging, required check, security
 ```
 

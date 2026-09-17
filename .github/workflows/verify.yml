@@ -39,6 +39,8 @@ jobs:
           node-version-file: .node-version
       - name: Repository hygiene
         run: node scripts/check-hygiene.mjs
+      - name: Documentation shape
+        run: node scripts/check-docs.mjs
       - name: Chassis tests
         run: node --test "test/*.test.mjs"
       # ultra:begin template
