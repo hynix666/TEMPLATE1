@@ -13,3 +13,4 @@ Records are amended, not rewritten. When a decision changes, a new record supers
 | [0005](0005-layered-services-with-enforced-boundaries.md) | Layered services with enforced boundaries | Accepted |
 | [0006](0006-one-set-of-agent-instructions.md) | One set of agent instructions, pointed at by every assistant | Accepted |
 | [0007](0007-mcp-server-as-an-adapter.md) | Expose the domain to assistants through an MCP adapter | Accepted |
+| [0008](0008-a-third-language-and-what-a-module-must-prove.md) | A third language, and what any module must prove | Accepted |

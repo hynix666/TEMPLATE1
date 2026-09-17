@@ -35,6 +35,12 @@ Services keep domain, use cases, adapters and a composition root, with dependenc
 `src/domain` is pure: no `node:` imports and no packages. `src/application` depends on the domain and its own ports, `src/adapters` implement them, and `src/main.ts` is the composition root. `scripts/check-boundaries.mjs` enforces it. Node runs the sources directly, so use only erasable TypeScript syntax: no `enum`, `namespace` or constructor parameter properties.
 <!-- ultra:end ts-service -->
 
+<!-- ultra:begin py-service -->
+### services/api-py
+
+`src/api_py/domain` is pure: no I/O, no clock, no randomness, and no imports beyond the pure standard-library modules the checker allows. `src/api_py/application` holds the use cases and its ports as `Protocol` classes; `src/api_py/adapters` holds the WSGI transport and the store; `src/api_py/main.py` is the composition root. `scripts/check_boundaries.py` parses every file with `ast` and enforces it. Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy` (strict) and `uv run pytest` inside the module, or `node scripts/verify.mjs py-service` from the root. Dependencies are managed by uv: never edit `uv.lock` by hand.
+<!-- ultra:end py-service -->
+
 <!-- ultra:begin mcp-server -->
 ### services/mcp-server
 
