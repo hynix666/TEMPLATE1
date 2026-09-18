@@ -58,6 +58,21 @@ jobs:
       - uses: ./.github/actions/setup-actionlint
       - run: actionlint -color
 
+  # zizmor audits the workflows for security rather than syntax: template injection, dangerous
+  # triggers, persisted credentials, cache poisoning. With a token it also confirms each pinned SHA
+  # belongs to the repository it names, so an impostor commit from a fork cannot pass as a pin.
+  zizmor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-zizmor
+      - run: zizmor .
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   # ultra:begin go-service
   go-service:
     runs-on: ubuntu-latest
@@ -274,6 +289,7 @@ jobs:
     needs:
       - chassis
       - actionlint
+      - zizmor
       # ultra:begin go-service
       - go-service
       # ultra:end go-service

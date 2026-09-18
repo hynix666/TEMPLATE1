@@ -171,3 +171,14 @@ The limitations section above still applies; in addition, publishing to npm cann
 | Assistant action | `claude.yml` runs an AI assistant on `@claude` mentions | Nothing | One vendor, and a paid API key; the template's agent support stays tool-neutral |
 
 **What the round confirmed.** Coolify has 18 workflows and none runs its test suite of roughly 870 files on a pull request; 17 of 18 use actions that are not pinned to a commit, and no job sets a timeout. Its `CLAUDE.md` is a symlink, which a default Windows checkout turns into a file containing only the text `AGENTS.md`. The repository tracks a private SSH key for its test host. Each is a failure mode a check in this template already rules out, which is why this round changed so little.
+
+## Sixth round: i-have-adhd and Linear's SDK (template v1.6.0)
+
+*Added 18 September 2026.* A third archive, likec4, was the same snapshot (`da65039`) that rounds three and four had already read, so it adds nothing.
+
+| Source | Strength | Taken into TEMPLATE1 | Left out, and why |
+|---|---|---|---|
+| linear (the Linear SDK) | The most disciplined workflows of any source: every action pinned, `permissions: {}` at the top of each workflow, `persist-credentials: false`, and [zizmor](https://docs.zizmor.sh) auditing the workflows on every pull request | zizmor as a job in the `verify` gate, installed from a pinned, checksum-verified binary, and run again in every generated preset | Its Dependabot `cooldown` (not chosen for now); changesets and husky hooks, where release-please and `verify` already cover the ground; schema-driven code generation, which belongs to that product |
+| i-have-adhd | One agent skill packaged for about eight assistants, with the Cursor copy kept a real file and a CI check that it matches the original; an `AGENTS.md` that tells agents to treat what they read as data and to stay out of secrets | That rule, as a line in `AGENTS.md` | The per-assistant plugin manifests (this template's skills are procedures for one repository, not a product to distribute); paid A/B evaluations of the skill with an AI judge, which a template cannot make every project run |
+
+**What the round confirmed.** i-have-adhd reached the same answer as [ADR-0009](../docs/adr/0009-where-agent-adapters-and-skills-live.md) on its own: a symlinked skill broke Windows clones and ZIP downloads (its issue #55), so it keeps real files. Linear's workflows are what `check-hygiene` rule 8 asks for; zizmor checks what that rule cannot, such as untrusted text expanded into a shell command, or a pinned commit that exists only in a fork.

@@ -5,7 +5,7 @@
 <!-- ultra:begin template -->
 **A GitHub repository template that starts a project with the verification, supply-chain and architecture discipline most projects only add after their first incident — and lets you choose the stack.**
 
-It combines the strongest ideas of thirty-five templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
+It combines the strongest ideas of thirty-seven templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
 
 - **One gate.** `node scripts/verify.mjs` runs what CI runs, and CI reports a single required check, `verify`.
 - **A pinned supply chain the build enforces.** Actions pinned to commit SHAs, checksum-verified binaries, digest-pinned images.
@@ -138,7 +138,7 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 
 ## Continuous integration
 
-- **`verify.yml`** — on every pull request, every push to `main`, and in a merge queue: repository hygiene, chassis tests, actionlint, and one job per module — each service job also runs the API contract and starts the service's container image to prove it answers — all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
+- **`verify.yml`** — on every pull request, every push to `main`, and in a merge queue: repository hygiene, chassis tests, actionlint, a security audit of the workflows with [zizmor](https://docs.zizmor.sh), and one job per module — each service job also runs the API contract and starts the service's container image to prove it answers — all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
 - **`pr-title.yml`** — pull request titles follow Conventional Commits.
 - **`copilot-setup-steps.yml`** — the environment GitHub's Copilot coding agent prepares before it works here: every toolchain the selected features need, then `node scripts/setup.mjs`. It runs on its own only when it changes.
 - **`security.yml`** — report-only scans that fail only when a scan could not run: gitleaks over new commits and weekly over history, `npm audit` for every npm lockfile, and pip-audit for the Python lockfile when that service is present.

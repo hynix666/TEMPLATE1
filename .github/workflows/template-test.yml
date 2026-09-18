@@ -66,6 +66,7 @@ jobs:
         with:
           version-file: services/api-py/pyproject.toml
       - uses: ./.github/actions/setup-actionlint
+      - uses: ./.github/actions/setup-zizmor
 
       # In place, on this job's own fresh checkout — exactly what an adopter runs after "Use this
       # template". The unit tests cover --out; this covers the path people actually take.
@@ -82,3 +83,4 @@ jobs:
           node scripts/setup.mjs
           node scripts/verify.mjs
           actionlint -color
+          zizmor --offline .

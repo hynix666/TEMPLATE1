@@ -30,6 +30,7 @@ Nothing updates these, so they are part of the release checklist. Each is a vers
 
 - **gitleaks** — `GITLEAKS_VERSION` and `GITLEAKS_SHA256` in `.github/workflows/security.yml`.
 - **actionlint** — `ACTIONLINT_VERSION` and `ACTIONLINT_SHA256` in `.github/actions/setup-actionlint/action.yml`.
+- **zizmor** — `ZIZMOR_VERSION` and `ZIZMOR_SHA256` in `.github/actions/setup-zizmor/action.yml`. The release publishes no checksum file; take the SHA-256 GitHub records for the asset: `gh api repos/zizmorcore/zizmor/releases/tags/vX.Y.Z --jq '.assets[] | select(.name == "zizmor-x86_64-unknown-linux-gnu.tar.gz") | .digest'`.
 <!-- ultra:begin go-service -->
 - **golangci-lint** — the `version:` input of its action in `.github/workflows/verify.yml`.
 - **govulncheck** — the `@v…` in the `go run` line of `.github/workflows/security.yml`.
