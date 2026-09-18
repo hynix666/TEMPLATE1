@@ -94,6 +94,7 @@ jobs:
       - name: Container image starts and answers
         run: |
           docker build --tag api-go:ci .
+          trap 'docker rm --force api-go > /dev/null 2>&1 || true' EXIT
           docker run --detach --name api-go --publish 8080:8080 api-go:ci
           for _ in $(seq 1 30); do
             if curl --fail --silent --show-error localhost:8080/healthz; then exit 0; fi
@@ -127,6 +128,7 @@ jobs:
       - name: Container image starts and answers
         run: |
           docker build --tag api-ts:ci .
+          trap 'docker rm --force api-ts > /dev/null 2>&1 || true' EXIT
           docker run --detach --name api-ts --publish 8080:8080 api-ts:ci
           for _ in $(seq 1 30); do
             if curl --fail --silent --show-error localhost:8080/healthz; then exit 0; fi
@@ -197,6 +199,7 @@ jobs:
       - name: Container image starts and answers
         run: |
           docker build --tag api-py:ci .
+          trap 'docker rm --force api-py > /dev/null 2>&1 || true' EXIT
           docker run --detach --name api-py --publish 8080:8080 api-py:ci
           for _ in $(seq 1 30); do
             if curl --fail --silent --show-error localhost:8080/healthz; then exit 0; fi
