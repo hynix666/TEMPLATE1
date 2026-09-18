@@ -54,6 +54,18 @@ npm run verify    # import boundaries, type-check, tests
 
 The tests drive the server through a real MCP client over an in-memory transport pair, so a tool that is registered but unreachable — a bad schema, a handler that throws — fails here rather than in someone's editor.
 
+## Publish
+
+`.github/workflows/mcp-publish.yml` publishes the image to GitHub Container Registry and `server.json` to the [MCP Registry](https://registry.modelcontextprotocol.io), where clients discover servers. It uses no stored token: the image is pushed with the run's `GITHUB_TOKEN`, and the registry trusts GitHub's OIDC identity for the `io.github.<owner>/` namespace.
+
+It runs after each release that creates a version tag, and on demand with a version. One-time setup:
+
+1. Release at least once, so a `v*` tag exists (the `release` feature does this; `gh release create` works too).
+2. Set the repository variable `MCP_PUBLISH_ENABLED=true`, then run the workflow once by hand with that version.
+3. Make the new container package public (the repository's *Packages* → package settings). The registry reads the image's `io.modelcontextprotocol.server.name` label to confirm you own it, which it cannot do for a private image.
+
+`test/server-json.test.ts` keeps the manifest honest in the meantime: the image label must equal the server's `name`, and every advertised variable must be one `src/config.ts` reads, with the default it really uses.
+
 ## Container
 
 ```bash
