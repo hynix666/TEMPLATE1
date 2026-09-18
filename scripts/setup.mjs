@@ -1,7 +1,8 @@
 /**
  * Installs the dependencies of every module present: `npm ci` where a lockfile exists (the exact
  * tree CI installs), `npm install` where one does not yet, `go mod download` for Go, and
- * `uv sync --frozen` for Python — each the command that installs exactly what the lockfile says.
+ * `uv sync --locked` for Python — each the command that installs exactly what the lockfile says, and
+ * refuses when the lockfile no longer matches its manifest. (`uv sync --frozen` does not refuse.)
  *
  * Exit 0 all installed · 1 an install failed.
  */
@@ -15,7 +16,7 @@ for (const module of presentModules()) {
   const [command, args] = module.toolchain === "go"
     ? ["go", ["mod", "download"]]
     : module.toolchain === "python"
-    ? ["uv", ["sync", existsSync(join(cwd, "uv.lock")) ? "--frozen" : "--no-frozen"]]
+    ? ["uv", existsSync(join(cwd, "uv.lock")) ? ["sync", "--locked"] : ["sync"]]
     : ["npm", [existsSync(join(cwd, "package-lock.json")) ? "ci" : "install"]];
   console.log(`\n▶ ${module.id}: ${command} ${args.join(" ")}`);
   const { status } = run(command, args, { cwd });

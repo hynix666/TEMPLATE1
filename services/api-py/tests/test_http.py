@@ -125,6 +125,44 @@ def test_a_malformed_or_oversized_body_is_refused_before_it_is_parsed() -> None:
     assert "documented fields" in json.loads(body)["error"]
 
 
+def test_head_is_answered_like_get_and_carries_no_body() -> None:
+    client = Client()
+    environ: dict[str, Any] = {"REQUEST_METHOD": "HEAD", "PATH_INFO": "/healthz", "wsgi.input": io.BytesIO(b"")}
+    captured: dict[str, Any] = {}
+    body = b"".join(client.app(environ, lambda status, _headers: captured.__setitem__("status", status)))
+    assert captured["status"].startswith("200")
+    assert body == b""
+
+
+def test_an_empty_body_is_malformed_not_an_empty_object() -> None:
+    # api-go and api-ts answer 400; reading it as {} would answer 422 about a missing title.
+    client = Client()
+    assert client.request("POST", "/api/tasks", raw=b"")[0] == 400
+    client.request("POST", "/api/tasks", {"title": "Write the README"})
+    assert client.request("PATCH", "/api/tasks/t1/status", raw=b"")[0] == 400
+
+
+def test_a_malformed_escape_in_an_id_is_refused() -> None:
+    assert Client().request("GET", "/api/tasks/%zz")[0] == 400
+
+
+def test_an_oversized_body_is_drained_before_the_refusal() -> None:
+    # Refusing without reading leaves the client mid-upload, and it sees a reset connection
+    # instead of the 400. The body is read up to a bound, then the answer goes out.
+    client = Client()
+    stream = io.BytesIO(b"x" * (MAX_BODY_BYTES + 10))
+    environ: dict[str, Any] = {
+        "REQUEST_METHOD": "POST",
+        "PATH_INFO": "/api/tasks",
+        "CONTENT_LENGTH": str(MAX_BODY_BYTES + 10),
+        "wsgi.input": stream,
+    }
+    captured: dict[str, Any] = {}
+    b"".join(client.app(environ, lambda status, _headers: captured.__setitem__("status", status)))
+    assert captured["status"].startswith("400")
+    assert stream.tell() == MAX_BODY_BYTES + 10
+
+
 def test_an_id_keeps_its_percent_encoding_while_routing() -> None:
     client = Client()
     client.service.repository.save(client.service.create("Write the README"))

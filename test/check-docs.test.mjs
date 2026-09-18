@@ -116,6 +116,9 @@ test("a relative link that goes nowhere fails, and code is not a link", (t) => {
   // A link to a file that exists, an external URL, and a bare anchor all pass.
   const fine = "# Runbook\n\n[index](README.md) [site](https://example.invalid/x.md) [top](#top)\n";
   assert.equal(checkDocs(fixture(t, { "docs/runbook.md": fine })).ok, true);
+  // A link out of the repository fails even when it happens to resolve on this machine: the
+  // fixture's own parent directory certainly exists, and it is still not in any clone.
+  assert.match(failures(t, { "docs/runbook.md": "# Runbook\n\n[up](../../)\n" }), /outside the repository/);
   // Link syntax quoted as code, or shown in a fence, is documentation about links, not a link.
   const quoted = ["# Runbook", "", "Write `[ADR-NNNN](NNNN-title.md)` with the real number.", "", "```md", "[x](also-missing.md)", "```", ""].join("\n");
   assert.equal(checkDocs(fixture(t, { "docs/runbook.md": quoted })).ok, true);

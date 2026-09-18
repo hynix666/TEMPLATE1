@@ -14,7 +14,8 @@
  *   5. Every directory under docs/ has a README.md linking the documents beside it, and
  *      docs/README.md links each of those indexes. A document nothing links to is a document
  *      nobody revises: it is how a docs tree becomes a pile of stale forks of the same page.
- *   6. Every relative Markdown link resolves. Code spans and fenced blocks are not links.
+ *   6. Every relative Markdown link resolves, inside the repository. Code spans and fenced blocks are
+ *      not links.
  *   7. Nothing is tracked under a name no tool reads: the singular AGENT.md, or a spelling that
  *      differs from AGENTS.md only in case, which a case-insensitive filesystem will hide.
  *   8. Copilot's .github/agents and .github/prompts files carry the frontmatter they are selected
@@ -26,7 +27,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const CANONICAL = "AGENTS.md";
@@ -145,7 +146,11 @@ function checkLinks(root, tracked, failures) {
         // A target that is not valid percent-encoding is checked as written.
       }
       const resolved = join(root, dirname(file), decoded);
-      if (!existsSync(resolved)) {
+      const inside = relative(root, resolved);
+      if (inside.startsWith("..") || isAbsolute(inside)) {
+        // It may resolve on the author's disk; on GitHub, and in every clone, it goes nowhere.
+        failures.push(`\`${file}:${line}\` links to \`${target}\`, outside the repository. Link to something in it, or use a full URL.`);
+      } else if (!existsSync(resolved)) {
         failures.push(`\`${file}:${line}\` links to \`${target}\`, which does not exist. A link nobody can follow is worse than no link.`);
       }
     }
