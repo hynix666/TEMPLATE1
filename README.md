@@ -136,12 +136,12 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 - **`security.yml`, Go** — govulncheck, reporting only vulnerabilities in code the Go service actually calls.
 <!-- ultra:end go-service -->
 - **`codeql.yml`** — CodeQL analysis; enable it by setting the repository variable `CODEQL_ENABLED=true` (needs a public repository or GitHub Advanced Security).
-- **`scorecard.yml`** — [OpenSSF Scorecard](https://scorecard.dev): an outside measurement of the practices this repository claims, published and uploaded to code scanning; enable it with `SCORECARD_ENABLED=true` on a public repository.
+- **`scorecard.yml`** — [OpenSSF Scorecard](https://scorecard.dev): an outside measurement of the practices this repository claims, published and uploaded to code scanning; enable it with `SCORECARD_ENABLED=true` on a public repository. Some checks measure the project rather than the workflows, and a new or single-maintainer repository scores low on them: Code-Review and Branch-Protection while pull requests merge without a second person's review, Maintained for its first 90 days, SAST until CodeQL has run on recent pull requests, and CII-Best-Practices until the project registers for the badge.
 <!-- ultra:begin mcp-server -->
 - **`mcp-publish.yml`** — after a release, pushes the MCP server's image to GitHub Container Registry and its `server.json` to the MCP Registry, tokenlessly; enable it with `MCP_PUBLISH_ENABLED=true` ([how](services/mcp-server/README.md#publish)).
 <!-- ultra:end mcp-server -->
 <!-- ultra:begin release -->
-- **`release.yml`** — release-please on `main`, off until `RELEASE_ENABLED=true`, which `configure-github.mjs` sets. Releases start at `0.1.0`, and each release pull request gets a dispatched `verify` run, so it can pass the required check without a personal token.
+- **`release.yml`** — release-please on `main`, off until `RELEASE_ENABLED=true`, which `configure-github.mjs` sets. Releases start at `0.1.0`. GitHub holds the checks of a pull request opened by `github-actions[bot]` until someone approves them, so releasing is: open the release pull request, *Approve workflows to run*, wait for `verify`, merge. A `RELEASE_PLEASE_TOKEN` secret holding a GitHub App or personal token removes that step.
 <!-- ultra:end release -->
 <!-- ultra:begin ts-library -->
 - **Library publishing** — with `release` selected, each release publishes `packages/ts-library` to npm with provenance once `NPM_PUBLISH_ENABLED=true` is set and npm trusts the workflow ([how](packages/ts-library/README.md#publish)).
@@ -163,6 +163,8 @@ This project was generated from TEMPLATE1, and `CHANGELOG.md` records the releas
 node scripts/template-update.mjs --to v1.4.0 --dry-run   # what would change
 node scripts/template-update.mjs --to v1.4.0             # apply, then review, verify and commit
 ```
+
+A project generated before v1.4.0 does not have the script yet. Run it once from a clone of the template, with the project as the working directory — `node ../TEMPLATE1/scripts/template-update.mjs --to v1.4.0` — and the update brings the script in with everything else.
 
 The `update-from-template` skill walks an agent through the whole procedure.
 
