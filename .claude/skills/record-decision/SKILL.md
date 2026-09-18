@@ -12,5 +12,5 @@ description: Write an architecture decision record when a change alters structur
    - **Alternatives considered** — each one with the reason it lost.
    - **Consequences** — what becomes easier, and what it costs, stated plainly.
 3. Add its row to the table in `docs/adr/README.md`.
-4. Changing an accepted decision: write a new ADR that supersedes it, and set the old record's status to `Superseded by [ADR-NNNN](NNNN-title.md)`. Never rewrite the old text; its reasoning is the record.
+4. Changing an accepted decision: write a new ADR that supersedes it, and set the old record's status to `Superseded by` and a link to the new record. Never rewrite the old text; its reasoning is the record.
 5. Ship the ADR in the same pull request as the change it explains.

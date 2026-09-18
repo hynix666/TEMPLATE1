@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { checkDocs, frontmatter, IMPORT_TEXT, linksTo, MAX_POINTER_LINES, MAX_SKILL_DESCRIPTION } from "../scripts/check-docs.mjs";
+import { checkDocs, frontmatter, IMPORT_TEXT, linksTo, markdownLinks, MAX_POINTER_LINES, MAX_SKILL_DESCRIPTION } from "../scripts/check-docs.mjs";
 
 const skill = (name, description = "When to use it.") => `---\nname: ${name}\ndescription: ${description}\n---\n\n# ${name}\n`;
 
@@ -102,6 +102,36 @@ test("a repository with no docs directory is not a failure", (t) => {
   assert.equal(result.docCount, 0);
 });
 
+test("a name no tool reads fails, including one that differs only in case", (t) => {
+  assert.match(failures(t, { "AGENT.md": "# stray\n" }), /is the singular name/);
+  assert.match(failures(t, { "docs/agents.md": "# stray\n" }), /only in case/);
+  assert.match(failures(t, { "packages/ui/Claude.md": IMPORT_TEXT }), /only in case/);
+});
+
+test("a relative link that goes nowhere fails, and code is not a link", (t) => {
+  assert.match(
+    failures(t, { "docs/runbook.md": "# Runbook\n\nSee [the plan](plan.md).\n" }),
+    /docs\/runbook\.md:3.*plan\.md/,
+  );
+  // A link to a file that exists, an external URL, and a bare anchor all pass.
+  const fine = "# Runbook\n\n[index](README.md) [site](https://example.invalid/x.md) [top](#top)\n";
+  assert.equal(checkDocs(fixture(t, { "docs/runbook.md": fine })).ok, true);
+  // Link syntax quoted as code, or shown in a fence, is documentation about links, not a link.
+  const quoted = ["# Runbook", "", "Write `[ADR-NNNN](NNNN-title.md)` with the real number.", "", "```md", "[x](also-missing.md)", "```", ""].join("\n");
+  assert.equal(checkDocs(fixture(t, { "docs/runbook.md": quoted })).ok, true);
+});
+
+test("a vendor customization file needs its frontmatter and must defer to AGENTS.md", (t) => {
+  const prompt = ".github/prompts/verify.prompt.md";
+  assert.match(failures(t, { [prompt]: "Run it. See [AGENTS.md](../../AGENTS.md).\n" }), /needs frontmatter with description/);
+  assert.match(failures(t, { [prompt]: "---\ndescription: Run it.\n---\n\nAlways skip the tests.\n" }), /never names AGENTS\.md/);
+  assert.match(
+    failures(t, { ".github/agents/reviewer.agent.md": "---\ndescription: Review.\n---\n\nFollow [AGENTS.md](../../AGENTS.md).\n" }),
+    /needs frontmatter with name/,
+  );
+  assert.match(failures(t, { ".github/prompts/notes.md": "# notes\n" }), /is not a `\.prompt\.md` file/);
+});
+
 test("frontmatter and link matching read what they claim to read", () => {
   assert.deepEqual(frontmatter('---\nname: a-b\ndescription: "Quoted: with a colon."\n---\nbody\n'), { name: "a-b", description: "Quoted: with a colon." });
   assert.equal(frontmatter("# no frontmatter\n"), null);
@@ -109,4 +139,9 @@ test("frontmatter and link matching read what they claim to read", () => {
   assert.equal(linksTo("see [x](./adr/README.md)", "adr/README.md"), true);
   // A longer path ending in the target is a different document.
   assert.equal(linksTo("see [x](old-runbook.md)", "runbook.md"), false);
+  // Inline code is not a link, and a title after the target is not part of it.
+  assert.deepEqual(markdownLinks('a [one](x.md) b\n`[two](y.md)`\n[three](z.md "title")'), [
+    { target: "x.md", line: 1 },
+    { target: "z.md", line: 3 },
+  ]);
 });
