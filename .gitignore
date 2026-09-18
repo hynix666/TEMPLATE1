@@ -33,3 +33,12 @@ architecture/png/
 Thumbs.db
 .idea/
 *.swp
+
+# ultra:begin py-service
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+# ultra:end py-service

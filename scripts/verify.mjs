@@ -41,6 +41,19 @@ function nodeModule(module) {
   step(`${module.id}: npm run verify`, "npm", ["run", "verify"], cwd);
 }
 
+function pythonModule(module) {
+  const cwd = join(ROOT, module.dir);
+  if (!available("uv", ["--version"])) {
+    record(`${module.id}: toolchain`, "fail", "uv is not on PATH; install uv (astral.sh/uv) or remove the module");
+    return;
+  }
+  step(`${module.id}: ruff check`, "uv", ["run", "ruff", "check", "."], cwd);
+  step(`${module.id}: ruff format`, "uv", ["run", "ruff", "format", "--check", "."], cwd);
+  step(`${module.id}: mypy`, "uv", ["run", "mypy"], cwd);
+  step(`${module.id}: pytest`, "uv", ["run", "pytest"], cwd);
+  step(`${module.id}: check-boundaries`, "uv", ["run", "python", "scripts/check_boundaries.py"], cwd);
+}
+
 function goModule(module) {
   const cwd = join(ROOT, module.dir);
   if (!available("go")) {
@@ -76,6 +89,7 @@ chassis();
 for (const module of present) {
   if (requested.length > 0 && !requested.includes(module.id)) continue;
   if (module.toolchain === "go") goModule(module);
+  else if (module.toolchain === "python") pythonModule(module);
   else nodeModule(module);
 }
 

@@ -35,6 +35,15 @@ model {
     user -> apiTs 'calls /api/tasks directly or through a client'
     // ultra:end ts-service
 
+    // ultra:begin py-service
+    apiPy = service 'api-py' {
+      technology 'Python 3.13, WSGI'
+      description 'Task HTTP API on the standard library; layer rules enforced by an ast-based check.'
+      link ../../services/api-py/README.md 'README'
+    }
+    user -> apiPy 'calls /api/tasks directly or through a client'
+    // ultra:end py-service
+
     // ultra:begin mcp-server
     mcpServer = service 'mcp-server' {
       technology 'TypeScript, Model Context Protocol SDK'

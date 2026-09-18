@@ -10,7 +10,7 @@ It combines the strongest ideas of twenty-five templates and references, includi
 - **One gate.** `node scripts/verify.mjs` runs what CI runs, and CI reports a single required check, `verify`.
 - **A pinned supply chain the build enforces.** Actions pinned to commit SHAs, checksum-verified binaries, digest-pinned images.
 - **Repository hygiene checks.** A tracked `.env`, a vendored `node_modules`, a truncated `.gitignore`, a 50 MB blob, or a CI job left out of the gate each fail the build.
-- **Clean Architecture services whose layer rules are tests**, in Go and TypeScript, with identical APIs.
+- **Clean Architecture services whose layer rules are tests**, in Go, TypeScript and Python, with identical APIs — the same structure proved three times, in three toolchains.
 - **A feature-sliced web app and a publishable library**, each with its import or packaging rules checked.
 - **An MCP server for agents**, built on the official SDK and tested through a real client, not a mock.
 - **Architecture as code.** A LikeC4 model with rules checked in CI.
@@ -52,6 +52,7 @@ It combines the strongest ideas of twenty-five templates and references, includi
 | `go-service` | Go HTTP service in Clean Architecture layers, standard library only; a test enforces the layer rules; golangci-lint; distroless image |
 | `ts-service` | TypeScript HTTP service run directly by Node 24; pure domain core; import boundaries checked on every file; no runtime dependencies |
 | `mcp-server` | MCP server on the official SDK: task tools over stdio for an AI assistant, same layers, driven in tests by a real client |
+| `py-service` | Python HTTP service on the standard library: pure domain, WSGI transport, ruff and strict mypy, layer rules enforced by an `ast`-based check |
 | `web` | React + Vite app organised by feature (bulletproof-react), import boundaries checked on every file, unit and component tests |
 | `ts-library` | TypeScript library for npm: one `exports` entry, publint and are-the-types-wrong checks on the packed tarball, tokenless trusted publishing with provenance |
 | `architecture` | LikeC4 model of the system, with model rules as tests and an opt-in GitHub Pages site |
@@ -62,6 +63,7 @@ It combines the strongest ideas of twenty-five templates and references, includi
 |---|---|
 | `minimal` | none: the chassis only (hygiene, CI, security, community files, ADRs) |
 | `go-api` | `go-service`, `architecture`, `release`, `devcontainer` |
+| `py-api` | `py-service`, `architecture`, `release`, `devcontainer` |
 | `fullstack-ts` | `ts-service`, `web`, `architecture`, `release`, `devcontainer` |
 | `library` | `ts-library`, `release`, `devcontainer` |
 | `mcp` | `mcp-server`, `release`, `devcontainer` |
@@ -81,6 +83,9 @@ Init deletes the features you did not select, keeps or removes the marked blocks
 <!-- ultra:begin ts-service -->
 - `services/api-ts/` — TypeScript task API with a pure domain core. [README](services/api-ts/README.md)
 <!-- ultra:end ts-service -->
+<!-- ultra:begin py-service -->
+- `services/api-py/` — Python task API, same routes and layers. [README](services/api-py/README.md)
+<!-- ultra:end py-service -->
 <!-- ultra:begin mcp-server -->
 - `services/mcp-server/` — MCP server exposing the task API to an AI assistant. [README](services/mcp-server/README.md)
 <!-- ultra:end mcp-server -->
@@ -105,6 +110,9 @@ Prerequisites:
 <!-- ultra:begin go-service -->
 - Go 1.26 (`services/api-go/go.mod`), and golangci-lint for the complete local check.
 <!-- ultra:end go-service -->
+<!-- ultra:begin py-service -->
+- Python 3.13 or newer and [uv](https://docs.astral.sh/uv/) (`services/api-py/.python-version`), which installs the rest.
+<!-- ultra:end py-service -->
 - The GitHub CLI, only for `configure-github.mjs`.
 
 ```bash

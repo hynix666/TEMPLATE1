@@ -20,6 +20,10 @@
       "summary": "MCP server on the Model Context Protocol SDK: tools over stdio, the same layers, driven in tests by a real client",
       "paths": ["services/mcp-server", ".claude/skills/add-mcp-tool"]
     },
+    "py-service": {
+      "summary": "Python HTTP service on the standard library: pure domain, WSGI transport, layer rules enforced by an ast-based check",
+      "paths": ["services/api-py", ".claude/skills/add-endpoint-py"]
+    },
     "web": {
       "summary": "React + Vite app in feature folders, import boundaries checked, component tests",
       "paths": ["apps/web"]
@@ -44,9 +48,10 @@
   "presets": {
     "minimal": [],
     "go-api": ["go-service", "architecture", "release", "devcontainer"],
+    "py-api": ["py-service", "architecture", "release", "devcontainer"],
     "fullstack-ts": ["ts-service", "web", "architecture", "release", "devcontainer"],
     "library": ["ts-library", "release", "devcontainer"],
     "mcp": ["mcp-server", "release", "devcontainer"],
-    "all": ["go-service", "ts-service", "mcp-server", "web", "ts-library", "architecture", "release", "devcontainer"]
+    "all": ["go-service", "ts-service", "py-service", "mcp-server", "web", "ts-library", "architecture", "release", "devcontainer"]
   }
 }
