@@ -47,6 +47,18 @@ It combines the strongest ideas of thirty-four templates and references, includi
    git push && node scripts/configure-github.mjs
    ```
 
+## Presets and features
+
+| Preset | Features |
+|---|---|
+| `minimal` | none: the chassis only (hygiene, CI, security, community files, ADRs) |
+| `go-api` | `go-service`, `architecture`, `release`, `devcontainer` |
+| `py-api` | `py-service`, `architecture`, `release`, `devcontainer` |
+| `fullstack-ts` | `ts-service`, `web`, `architecture`, `release`, `devcontainer` |
+| `library` | `ts-library`, `release`, `devcontainer` |
+| `mcp` | `mcp-server`, `release`, `devcontainer` |
+| `all` | every feature |
+
 | Feature | What you get |
 |---|---|
 | `go-service` | Go HTTP service in Clean Architecture layers, standard library only; a test enforces the layer rules; golangci-lint; distroless image |
@@ -59,17 +71,15 @@ It combines the strongest ideas of thirty-four templates and references, includi
 | `release` | release-please: release pull requests, tags and `CHANGELOG.md` from Conventional Commits |
 | `devcontainer` | Dev Container with the toolchains of the features you selected |
 
-| Preset | Features |
-|---|---|
-| `minimal` | none: the chassis only (hygiene, CI, security, community files, ADRs) |
-| `go-api` | `go-service`, `architecture`, `release`, `devcontainer` |
-| `py-api` | `py-service`, `architecture`, `release`, `devcontainer` |
-| `fullstack-ts` | `ts-service`, `web`, `architecture`, `release`, `devcontainer` |
-| `library` | `ts-library`, `release`, `devcontainer` |
-| `mcp` | `mcp-server`, `release`, `devcontainer` |
-| `all` | every feature |
-
 Init deletes the features you did not select, keeps or removes the marked blocks in shared files such as workflows and this README, replaces the template's name and owner with yours, and deletes itself. [template/README.md](template/README.md) explains the mechanism and how to add a feature.
+
+## What it leaves out
+
+Deployment targets and infrastructure, databases and migrations, authentication, message queues, UI frameworks beyond the minimal React app, and desktop or mobile clients. Each is a product choice with more than one good answer, so each project makes it; [template/README.md](template/README.md#scope) says why.
+
+## Read more
+
+[docs/README.md](docs/README.md) indexes the documentation, [AGENTS.md](AGENTS.md) holds the rules every contributor and coding agent follows, and [template/README.md](template/README.md) covers how the template is versioned and released.
 
 ---
 <!-- ultra:end template -->
