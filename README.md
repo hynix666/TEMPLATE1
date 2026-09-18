@@ -128,7 +128,7 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 
 ## Continuous integration
 
-- **`verify.yml`** — on every push and pull request: repository hygiene, chassis tests, actionlint, and one job per module — each service job also runs the API contract and starts the service's container image to prove it answers — all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
+- **`verify.yml`** — on every pull request, every push to `main`, and in a merge queue: repository hygiene, chassis tests, actionlint, and one job per module — each service job also runs the API contract and starts the service's container image to prove it answers — all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
 - **`pr-title.yml`** — pull request titles follow Conventional Commits.
 - **`copilot-setup-steps.yml`** — the environment GitHub's Copilot coding agent prepares before it works here: every toolchain the selected features need, then `node scripts/setup.mjs`. It runs on its own only when it changes.
 - **`security.yml`** — report-only scans that fail only when a scan could not run: gitleaks over new commits and weekly over history, `npm audit` for every npm lockfile, and pip-audit for the Python lockfile when that service is present.
