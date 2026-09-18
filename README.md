@@ -164,6 +164,8 @@ node scripts/template-update.mjs --to v1.4.0 --dry-run   # what would change
 node scripts/template-update.mjs --to v1.4.0             # apply, then review, verify and commit
 ```
 
+A project generated before v1.4.0 does not have the script yet. Run it once from a clone of the template, with the project as the working directory — `node ../TEMPLATE1/scripts/template-update.mjs --to v1.4.0` — and the update brings the script in with everything else.
+
 The `update-from-template` skill walks an agent through the whole procedure.
 
 ## Contributing and security
