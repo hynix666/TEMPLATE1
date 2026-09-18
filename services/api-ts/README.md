@@ -32,7 +32,7 @@ curl -s localhost:8080/api/tasks -d '{"title":"ship it"}'
 | `GET /api/tasks/{id}` | `200` the task · `404` |
 | `PATCH /api/tasks/{id}/status` `{"status"}` | `200` · `409` transition not allowed · `422` unknown status |
 
-Bodies are capped at 1 MiB and unknown fields are rejected with `400`. Every task service in this template answers these routes identically; this module keeps its own copy of the table so it stays readable, and removable, on its own.
+Bodies are capped at 1 MiB and unknown fields are rejected with `400`. `HEAD` is answered wherever `GET` is. A missing or `null` title reads as empty (`422`); a title of another type, an empty body and a malformed path are refused as malformed (`400`). Every error is JSON, `{"error": "…"}`. The cases in [`scripts/contract/tasks-api.json`](../../scripts/contract/tasks-api.json) are the contract every task service keeps, and `node scripts/check-contract.mjs` holds this one to them. This module keeps its own copy of the table so it stays readable, and removable, on its own.
 
 ## Check
 

@@ -10,7 +10,7 @@ It combines the strongest ideas of thirty-four templates and references, includi
 - **One gate.** `node scripts/verify.mjs` runs what CI runs, and CI reports a single required check, `verify`.
 - **A pinned supply chain the build enforces.** Actions pinned to commit SHAs, checksum-verified binaries, digest-pinned images.
 - **Repository hygiene checks.** A tracked `.env`, a vendored `node_modules`, a truncated `.gitignore`, a 50 MB blob, or a CI job left out of the gate each fail the build.
-- **Clean Architecture services whose layer rules are tests**, in Go, TypeScript and Python, with identical APIs — the same structure proved three times, in three toolchains.
+- **Clean Architecture services whose layer rules are tests**, in Go, TypeScript and Python — the same structure proved in three toolchains, and the same API proved by one contract every service is started and checked against.
 - **A feature-sliced web app and a publishable library**, each with its import or packaging rules checked.
 - **An MCP server for agents**, built on the official SDK and tested through a real client, not a mock.
 - **Architecture as code.** A LikeC4 model with rules checked in CI.
@@ -76,7 +76,7 @@ Init deletes the features you did not select, keeps or removes the marked blocks
 
 ## Layout
 
-- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs the whole check, `check-hygiene.mjs` guards the repository's shape, `check-docs.mjs` its documentation.
+- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs the whole check, `check-hygiene.mjs` guards the repository's shape, `check-docs.mjs` its documentation, and `check-contract.mjs` holds every task service to the one API contract in `scripts/contract/`.
 <!-- ultra:begin go-service -->
 - `services/api-go/` — Go task API in Clean Architecture layers. [README](services/api-go/README.md)
 <!-- ultra:end go-service -->
@@ -128,10 +128,10 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 
 ## Continuous integration
 
-- **`verify.yml`** — on every push and pull request: repository hygiene, chassis tests, actionlint, and one job per module, all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
+- **`verify.yml`** — on every push and pull request: repository hygiene, chassis tests, actionlint, and one job per module — each service job also runs the API contract and starts the service's container image to prove it answers — all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
 - **`pr-title.yml`** — pull request titles follow Conventional Commits.
 - **`copilot-setup-steps.yml`** — the environment GitHub's Copilot coding agent prepares before it works here: every toolchain the selected features need, then `node scripts/setup.mjs`. It runs on its own only when it changes.
-- **`security.yml`** — report-only scans that fail only when a scan could not run: gitleaks over new commits and weekly over history, and `npm audit` for every npm lockfile.
+- **`security.yml`** — report-only scans that fail only when a scan could not run: gitleaks over new commits and weekly over history, `npm audit` for every npm lockfile, and pip-audit for the Python lockfile when that service is present.
 <!-- ultra:begin go-service -->
 - **`security.yml`, Go** — govulncheck, reporting only vulnerabilities in code the Go service actually calls.
 <!-- ultra:end go-service -->

@@ -17,6 +17,11 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/api_py"]
 
+[tool.uv]
+# The one place uv's version is pinned: uv refuses to run outside this range, and every workflow's
+# setup-uv step reads it. Pre-1.0, a minor release can change behaviour, so the range stops there.
+required-version = ">=0.12.5,<0.13"
+
 [tool.ruff]
 line-length = 120
 src = ["src", "tests", "scripts"]
