@@ -45,6 +45,14 @@ cd ../demo-minimal && git init -q && git add -A && node scripts/setup.mjs && nod
 
 `template/init.test.mjs` checks the marker grammar, identity replacement, argument validation, that the manifest matches the tree, and that an initialized project has no template residue. `.github/workflows/template-test.yml` generates every preset in CI and runs each project's own `setup`, `verify` and actionlint.
 
+## Scope
+
+TEMPLATE1 1.x is complete in scope. It gives a project the things with no product opinion — one verification gate, a pinned supply chain, repository and documentation checks, agent guidance, releases, security scanning, and a set of services and packages that demonstrate one architecture in three languages. A change belongs in the template when it would be right for nearly every project made from it.
+
+These stay decisions for each project, and are left out on purpose: deployment targets and infrastructure, databases and migrations, authentication, message queues, UI frameworks beyond the minimal React app, and desktop or mobile clients. Each is a product choice with more than one good answer, and a template that picks one makes every other project undo it.
+
+A new feature has to meet the five requirements in [ADR-0008](../docs/adr/0008-a-third-language-and-what-a-module-must-prove.md) and the checklist above. Anything that changes what a generated project must do is a major version.
+
 ## Releasing the template
 
 A repository created from the template has none of its history or tags, so init writes the template's `version` from `features.json` into the new project's `CHANGELOG.md`, linking to the matching release. That line is how a project later tells which template changes it already has. To release:

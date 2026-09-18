@@ -89,7 +89,7 @@ Nine criteria, each asking whether a property is **enforced by the build**, mere
 
 ## Known limitations
 
-- Initialization is one-way. Later template improvements must be merged into a project by hand; an upstream-merge procedure like react-starter-kit's `merge-seed` skill would be the next thing to add.
+- Initialization is one-way. Later template improvements must be merged into a project by hand; an upstream-merge procedure like react-starter-kit's `merge-seed` skill would be the next thing to add. *Resolved in v1.4.0:* `scripts/template-update.mjs` regenerates a project at both releases and applies the difference as a three-way merge, with the `update-from-template` skill around it.
 - A marker block depends on exactly one feature (see `template/README.md`).
 - CodeQL and the Pages deployment are opt-in, so the template's own CI does not exercise them while the repository is private.
 - The workflow checks in `check-hygiene` read the two-space YAML layout this repository uses, not arbitrary YAML.

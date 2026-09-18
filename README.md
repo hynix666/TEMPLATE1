@@ -155,6 +155,17 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 
 Dependabot proposes grouped updates weekly for every ecosystem present, SHA-pinned actions included.
 
+## Taking template updates
+
+This project was generated from TEMPLATE1, and `CHANGELOG.md` records the release it came from. When a later release fixes something you want, `scripts/template-update.mjs` brings the change in: it regenerates the project as the old and the new release would have made it, with this project's name and features, and applies the difference as a three-way merge. What you changed yourself is kept, and a conflict is left to resolve like any merge conflict.
+
+```bash
+node scripts/template-update.mjs --to v1.4.0 --dry-run   # what would change
+node scripts/template-update.mjs --to v1.4.0             # apply, then review, verify and commit
+```
+
+The `update-from-template` skill walks an agent through the whole procedure.
+
 ## Contributing and security
 
 [CONTRIBUTING.md](CONTRIBUTING.md) describes the workflow, [SECURITY.md](SECURITY.md) how to report a vulnerability privately, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) the expected conduct. Guidance for coding agents is in [AGENTS.md](AGENTS.md).
