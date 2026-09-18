@@ -18,9 +18,13 @@ for (const module of presentModules()) {
     ? ["uv", ["sync", existsSync(join(cwd, "uv.lock")) ? "--frozen" : "--no-frozen"]]
     : ["npm", [existsSync(join(cwd, "package-lock.json")) ? "ci" : "install"]];
   console.log(`\n▶ ${module.id}: ${command} ${args.join(" ")}`);
-  if (run(command, args, { cwd }).status !== 0) {
+  const { status } = run(command, args, { cwd });
+  if (status !== 0) {
     failed++;
-    console.error(`setup: ${module.id} failed to install.`);
+    // 127 is what run() returns when the command could not start at all: name the missing tool,
+    // or the only clue is a red line that says nothing about why.
+    const why = status === 127 ? ` ${command} is not on PATH; install it or remove the module.` : "";
+    console.error(`setup: ${module.id} failed to install.${why}`);
   }
 }
 if (failed === 0) console.log("\nsetup: OK — next, node scripts/verify.mjs");
