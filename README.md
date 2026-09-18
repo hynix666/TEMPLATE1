@@ -5,7 +5,7 @@
 <!-- ultra:begin template -->
 **A GitHub repository template that starts a project with the verification, supply-chain and architecture discipline most projects only add after their first incident — and lets you choose the stack.**
 
-It combines the strongest ideas of twenty-five templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
+It combines the strongest ideas of thirty-four templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
 
 - **One gate.** `node scripts/verify.mjs` runs what CI runs, and CI reports a single required check, `verify`.
 - **A pinned supply chain the build enforces.** Actions pinned to commit SHAs, checksum-verified binaries, digest-pinned images.
@@ -115,6 +115,8 @@ Prerequisites:
 <!-- ultra:end py-service -->
 - The GitHub CLI, only for `configure-github.mjs`.
 
+Each toolchain version is pinned once, in the file that toolchain reads: `.node-version`, `go.mod`, `.python-version`. Version managers such as mise and asdf can be configured to read those files directly, so there is no `.tool-versions` to keep in step with them.
+
 ```bash
 node scripts/setup.mjs              # install the dependencies of every module present
 node scripts/verify.mjs             # the whole check, as CI runs it
@@ -134,6 +136,10 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 - **`security.yml`, Go** — govulncheck, reporting only vulnerabilities in code the Go service actually calls.
 <!-- ultra:end go-service -->
 - **`codeql.yml`** — CodeQL analysis; enable it by setting the repository variable `CODEQL_ENABLED=true` (needs a public repository or GitHub Advanced Security).
+- **`scorecard.yml`** — [OpenSSF Scorecard](https://scorecard.dev): an outside measurement of the practices this repository claims, published and uploaded to code scanning; enable it with `SCORECARD_ENABLED=true` on a public repository.
+<!-- ultra:begin mcp-server -->
+- **`mcp-publish.yml`** — after a release, pushes the MCP server's image to GitHub Container Registry and its `server.json` to the MCP Registry, tokenlessly; enable it with `MCP_PUBLISH_ENABLED=true` ([how](services/mcp-server/README.md#publish)).
+<!-- ultra:end mcp-server -->
 <!-- ultra:begin release -->
 - **`release.yml`** — release-please on `main`, off until `RELEASE_ENABLED=true`, which `configure-github.mjs` sets. Releases start at `0.1.0`, and each release pull request gets a dispatched `verify` run, so it can pass the required check without a personal token.
 <!-- ultra:end release -->
