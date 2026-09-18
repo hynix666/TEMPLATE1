@@ -132,9 +132,11 @@ export function update({ project, to, dryRun = false, template, owner, repo, log
     const entries = git(pair, ["diff", "--no-renames", "--name-status", before, after, ...scope]).trim().split("\n").filter(Boolean);
     // A change to a file the project has since deleted is the project's decision standing; skip it
     // rather than let one missing file make git apply refuse the whole patch.
-    const skipped = entries.map((e) => e.split("\t")).filter(([kind, path]) => kind !== "A" && !existsSync(join(project, path))).map(([, path]) => path);
+    // Each line is "<status>\t<path>"; a path may itself contain a tab, so split at the first one only.
+    const parsed = entries.map((e) => [e.slice(0, e.indexOf("\t")), e.slice(e.indexOf("\t") + 1)]);
+    const skipped = parsed.filter(([kind, path]) => kind !== "A" && !existsSync(join(project, path))).map(([, path]) => path);
     scope = [...scope, ...skipped.map((path) => `:(exclude)${path}`)];
-    const files = entries.map((e) => e.replace("\t", " ")).filter((e) => !skipped.includes(e.slice(2)));
+    const files = parsed.filter(([, path]) => !skipped.includes(path)).map(([kind, path]) => `${kind} ${path}`);
     if (skipped.length > 0) log(`template-update: skipped ${skipped.length} file(s) this project removed: ${skipped.join(", ")}`);
     if (files.length === 0) {
       log(`template-update: nothing in ${to} changes a file this project has.`);
