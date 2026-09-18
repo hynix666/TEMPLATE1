@@ -82,6 +82,7 @@ Write instructions here, decisions in `docs/adr/`, and anything about one module
 - Pull request titles follow Conventional Commits; pull requests are squash-merged.
 - A structural decision gets an ADR in `docs/adr/`, copied from `0000-template.md`. Accepted ADRs are superseded, never rewritten.
 - A new check gets a test that makes it fail, not only one that makes it pass.
+- Reproduce a bug before fixing it: write a test that fails on the unchanged code, then show the same test passing after the fix. A bug you cannot reproduce is not yet understood.
 - Validate input at system boundaries and fail loudly inside them.
 - Comments explain why — a constraint, an incident, a trade-off — not what the next line does.
 - Make the smallest change that solves the problem. No speculative abstraction.

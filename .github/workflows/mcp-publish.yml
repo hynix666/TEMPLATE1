@@ -3,6 +3,10 @@
 # is pushed with this run's GITHUB_TOKEN, and the registry trusts GitHub's OIDC identity for the
 # io.github.<owner>/ namespace.
 #
+# The image is built for linux/amd64 and linux/arm64, each on a native runner, and published as one tag.
+# An MCP server usually runs on the developer's own machine, and an amd64-only image runs emulated on an
+# Apple Silicon Mac, if at all.
+#
 # Off until the repository variable MCP_PUBLISH_ENABLED is set to true; services/mcp-server/README.md
 # lists the one-time steps first.
 name: mcp-publish
@@ -24,7 +28,7 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  release:
     # workflow_run runs with this repository's permissions whatever triggered it, so it only proceeds
     # for a successful push to this repository's default branch. The repository check matters: a fork
     # can name its own branch `main`, so the branch name alone proves nothing.
@@ -34,11 +38,10 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository &&
       github.event.workflow_run.head_branch == github.event.repository.default_branch))
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       # The release is found through the API and only its tag is checked out — never the commit the
       # workflow_run event names. A tag can be created only by someone with write access; the event's
@@ -67,29 +70,69 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
+  image:
+    needs: release
+    if: needs.release.outputs.tag != ''
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: steps.version.outputs.tag != ''
         with:
-          ref: refs/tags/${{ steps.version.outputs.tag }}
+          ref: refs/tags/${{ needs.release.outputs.tag }}
           persist-credentials: false
 
-      - name: Build and push the image
-        if: steps.version.outputs.version != ''
+      - name: Build and push the ${{ matrix.arch }} image
         working-directory: services/mcp-server
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.release.outputs.version }}
+          ARCH: ${{ matrix.arch }}
           OWNER: ${{ github.repository_owner }}
           GH_TOKEN: ${{ github.token }}
         run: |
           # Image references must be lowercase; a GitHub owner need not be.
-          IMAGE="ghcr.io/${OWNER,,}/template1-mcp-server:$VERSION"
+          IMAGE="ghcr.io/${OWNER,,}/template1-mcp-server:$VERSION-$ARCH"
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker build --tag "$IMAGE" .
           docker push "$IMAGE"
+
+  publish:
+    needs: [release, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ needs.release.outputs.tag }}
+          persist-credentials: false
+
+      - name: Publish both images under one tag
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+          OWNER: ${{ github.repository_owner }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          IMAGE="ghcr.io/${OWNER,,}/template1-mcp-server:$VERSION"
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          # An index naming the two images: a client pulls the one built for its own architecture.
+          docker buildx imagetools create --tag "$IMAGE" "$IMAGE-amd64" "$IMAGE-arm64"
+          docker buildx imagetools inspect "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
       - name: Install mcp-publisher, checksum-verified
-        if: steps.version.outputs.version != ''
         run: |
           curl -fsSL -o mcp-publisher.tar.gz \
             https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
@@ -97,12 +140,12 @@ jobs:
           tar -xzf mcp-publisher.tar.gz mcp-publisher
 
       - name: Publish server.json to the MCP Registry
-        if: steps.version.outputs.version != ''
         working-directory: services/mcp-server
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.release.outputs.version }}
         run: |
-          # The committed manifest names the image by pattern; publish the exact one just pushed.
+          # The committed manifest names the image by pattern; publish the exact one just pushed. The
+          # registry reads the label from the linux/amd64 image in the index, which carries it like the other.
           jq --arg v "$VERSION" --arg image "$IMAGE" \
             '.version = $v | .packages[0].identifier = $image' server.json > server.tmp
           mv server.tmp server.json
