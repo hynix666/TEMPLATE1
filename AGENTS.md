@@ -17,7 +17,7 @@ Each of these fails `scripts/check-hygiene.mjs` or a module's own checks. Do not
 - **Least privilege in workflows.** Top-level `permissions: contents: read`, widened per job only where needed. Every job has `timeout-minutes`. Event values such as branch names reach shell scripts through `env:`, never as `${{ }}` inside `run:`.
 - **Repository shape.** No `.env` files, no dependency directories, no file over 4 MB, no invalid JSON, nothing both tracked and ignored.
 - **Independent modules.** Every module has its own manifest, lockfile and CI job. Never import across module directories ([ADR-0004](docs/adr/0004-independent-modules.md)).
-- **One set of instructions.** This file is the only one. `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` point here and carry no rules of their own, and every document under `docs/` is linked from the index beside it. `scripts/check-docs.mjs` enforces both.
+- **One set of instructions.** This file is the only one. `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` point here and carry no rules of their own; files under `.github/prompts/` and `.github/agents/` wrap a task and defer to this file; no `AGENT.md` and no case variants of these names. Every document under `docs/` is linked from the index beside it, and every relative link resolves. `scripts/check-docs.mjs` enforces all of it ([ADR-0006](docs/adr/0006-one-set-of-agent-instructions.md), [ADR-0009](docs/adr/0009-where-agent-adapters-and-skills-live.md)).
 
 ## Architecture
 
@@ -69,7 +69,9 @@ When both services exist, keep them behaviourally identical: the same routes, st
 
 ## Skills
 
-Step-by-step procedures for recurring tasks live in `.claude/skills/<name>/SKILL.md`: recording a decision, and adding an endpoint to each service present. Follow the matching skill instead of improvising the procedure.
+Step-by-step procedures for recurring tasks live in `.claude/skills/<name>/SKILL.md`: recording a decision, and adding an endpoint or tool to each module present. Follow the matching skill instead of improvising the procedure. They are plain Markdown, so any assistant can read them from there; Claude Code also loads them by name. Keep them as real files, never symlinks: the repository must work in a Windows checkout.
+
+An assistant working in GitHub's cloud prepares its environment with `.github/workflows/copilot-setup-steps.yml`, which installs every module's dependencies the way `node scripts/setup.mjs` does locally.
 
 ## Documentation
 

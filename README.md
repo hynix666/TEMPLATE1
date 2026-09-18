@@ -99,7 +99,7 @@ Init deletes the features you did not select, keeps or removes the marked blocks
 - `architecture/` — LikeC4 model of the system. [README](architecture/README.md)
 <!-- ultra:end architecture -->
 - `docs/` — [the documentation index](docs/README.md) and the rules for keeping it true; `docs/adr/` holds the architecture decision records.
-- `.claude/skills/` — step-by-step procedures coding agents follow for recurring tasks.
+- `.claude/skills/` — step-by-step procedures coding agents follow for recurring tasks. `.github/prompts/` holds Copilot prompt files that wrap one of them; `AGENTS.md` holds the rules all of them follow.
 - `.github/` — workflows, issue forms, pull request template, Dependabot and code owners.
 
 ## Getting started
@@ -128,6 +128,7 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 
 - **`verify.yml`** — on every push and pull request: repository hygiene, chassis tests, actionlint, and one job per module, all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
 - **`pr-title.yml`** — pull request titles follow Conventional Commits.
+- **`copilot-setup-steps.yml`** — the environment GitHub's Copilot coding agent prepares before it works here: every toolchain the selected features need, then `node scripts/setup.mjs`. It runs on its own only when it changes.
 - **`security.yml`** — report-only scans that fail only when a scan could not run: gitleaks over new commits and weekly over history, and `npm audit` for every npm lockfile.
 <!-- ultra:begin go-service -->
 - **`security.yml`, Go** — govulncheck, reporting only vulnerabilities in code the Go service actually calls.
