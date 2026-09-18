@@ -11,6 +11,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Weekly even with no commits: a runner image, a toolchain release or a registry can break a
+  # generated project while the template itself stands still, and a template is judged by what it
+  # generates on the day someone uses it.
+  schedule:
+    - cron: "17 6 * * 1"
   workflow_dispatch:
 
 permissions:

@@ -26,10 +26,12 @@ permissions:
 jobs:
   publish:
     # workflow_run runs with this repository's permissions whatever triggered it, so it only proceeds
-    # for a successful push to the default branch — never for anything a pull request could start.
+    # for a successful push to this repository's default branch. The repository check matters: a fork
+    # can name its own branch `main`, so the branch name alone proves nothing.
     if: >-
       vars.MCP_PUBLISH_ENABLED == 'true' && (github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
       github.event.workflow_run.head_branch == github.event.repository.default_branch))
     runs-on: ubuntu-latest
     timeout-minutes: 20
