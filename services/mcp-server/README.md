@@ -61,8 +61,9 @@ The tests drive the server through a real MCP client over an in-memory transport
 It runs after each release that creates a version tag, and on demand with a version. One-time setup:
 
 1. Release at least once, so a `v*` tag exists (the `release` feature does this; `gh release create` works too).
-2. Set the repository variable `MCP_PUBLISH_ENABLED=true`, then run the workflow once by hand with that version.
-3. Make the new container package public (the repository's *Packages* → package settings). The registry reads the image's `io.modelcontextprotocol.server.name` label to confirm you own it, which it cannot do for a private image.
+2. Set the repository variable `MCP_PUBLISH_ENABLED=true`, then run the workflow once by hand with that version. **This first run is expected to fail at its last step**, *Publish server.json to the MCP Registry*, with "is private or requires authentication". The images are pushed by then, but GitHub creates a new container package as private, and the registry only accepts an image anyone can pull.
+3. Make the package public: on its page, *Package settings* → *Danger Zone* → *Change visibility* → *Public*. It is `OWNER/template1-mcp-server`, listed under the repository's *Packages*. The registry reads the image's `io.modelcontextprotocol.server.name` label to confirm you own it, which it cannot do for a private image. Check before going on: `curl -s -o /dev/null -w '%{http_code}\n' "https://ghcr.io/token?scope=repository:OWNER/template1-mcp-server:pull"` prints `200` once the package is public, and `401` while it is still private.
+4. Re-run the failed job of that run (*Re-run failed jobs*). It publishes `server.json`, and every later release publishes on its own.
 
 `test/server-json.test.ts` keeps the manifest honest in the meantime: the image label must equal the server's `name`, and every advertised variable must be one `src/config.ts` reads, with the default it really uses.
 
