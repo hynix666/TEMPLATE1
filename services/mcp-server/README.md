@@ -58,7 +58,7 @@ The tests drive the server through a real MCP client over an in-memory transport
 
 `.github/workflows/mcp-publish.yml` publishes the image to GitHub Container Registry and `server.json` to the [MCP Registry](https://registry.modelcontextprotocol.io), where clients discover servers. It uses no stored token: the image is pushed with the run's `GITHUB_TOKEN`, and the registry trusts GitHub's OIDC identity for the `io.github.<owner>/` namespace. The image is built for `linux/amd64` and `linux/arm64`, each on a native runner, and published as one tag, so it runs natively on an Apple Silicon Mac. The two builds also stay in the registry as `<version>-amd64` and `<version>-arm64`. In a private repository the arm64 runner uses paid Actions minutes once the free allowance is spent.
 
-It runs after each release that creates a version tag, and on demand with a version. One-time setup:
+It runs after each release that creates a version tag, and on demand with a version. Its first job runs in the GitHub environment `mcp-registry`, which GitHub creates on first use; a required reviewer or a limit on which refs may publish, set there, holds the whole publish. One-time setup:
 
 1. Release at least once, so a `v*` tag exists (the `release` feature does this; `gh release create` works too).
 2. Set the repository variable `MCP_PUBLISH_ENABLED=true`, then run the workflow once by hand with that version. **This first run is expected to fail at its last step**, *Publish server.json to the MCP Registry*, with "is private or requires authentication". The images are pushed by then, but GitHub creates a new container package as private, and the registry only accepts an image anyone can pull.
