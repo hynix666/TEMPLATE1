@@ -1,5 +1,5 @@
 name: Set up zizmor
-description: Installs a checksum-verified zizmor binary and puts it on PATH.
+description: Installs a checksum-verified zizmor binary into /usr/local/bin.
 runs:
   using: composite
   steps:
@@ -15,10 +15,9 @@ runs:
         mkdir -p "$dir"
         cd "$dir"
         tarball="zizmor-x86_64-unknown-linux-gnu.tar.gz"
-        curl -fsSL -o "$tarball" "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/${tarball}"
+        curl -fsSL --retry 3 --retry-all-errors -o "$tarball" "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/${tarball}"
         echo "${ZIZMOR_SHA256}  ${tarball}" | sha256sum -c -
         tar -xzf "$tarball"
         bin="$(find "$dir" -type f -name zizmor | head -n 1)"
         test -n "$bin" || { echo "::error::no zizmor binary in ${tarball}"; exit 1; }
-        chmod +x "$bin"
-        dirname "$bin" >> "$GITHUB_PATH"
+        sudo install -m 0755 "$bin" /usr/local/bin/zizmor
