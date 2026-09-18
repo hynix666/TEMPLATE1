@@ -56,7 +56,7 @@ Code flows one way: `src/lib` (shared) → `src/features/<name>` → `src/app`. 
 <!-- ultra:begin ts-library -->
 ### packages/ts-library
 
-Everything consumers may import is exported from `src/index.ts`; the `exports` map has a single entry, so nothing else is reachable. `isolatedDeclarations` requires explicit types on exports. `npm run verify` builds and then checks the packed tarball with publint and are-the-types-wrong — a change that breaks how the package resolves for consumers fails there, not after publishing. Versions come from release tags; never edit `version` in `package.json` by hand.
+Everything consumers may import is exported from `src/index.ts`; the `exports` map has a single entry, so nothing else is reachable. `isolatedDeclarations` requires explicit types on exports. `npm run verify` builds and then checks the packed tarball with publint and are-the-types-wrong, then installs it into an empty project and imports it by name — a change that breaks how the package resolves or loads for consumers fails there, not after publishing. Versions come from release tags; never edit `version` in `package.json` by hand.
 <!-- ultra:end ts-library -->
 
 <!-- ultra:begin architecture -->

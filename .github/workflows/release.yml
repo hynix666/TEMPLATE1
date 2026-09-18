@@ -53,6 +53,9 @@ jobs:
   publish-library:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true' && vars.NPM_PUBLISH_ENABLED == 'true'
+    # A deployment environment: npm's trusted publisher can require it, and its settings can add a
+    # required reviewer or limit which refs may publish, with no change to this file.
+    environment: npm
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

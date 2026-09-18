@@ -5,7 +5,7 @@
 <!-- ultra:begin template -->
 **A GitHub repository template that starts a project with the verification, supply-chain and architecture discipline most projects only add after their first incident — and lets you choose the stack.**
 
-It combines the strongest ideas of thirty-nine templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
+It combines the strongest ideas of forty templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
 
 - **One gate.** `node scripts/verify.mjs` runs what CI runs, and CI reports a single required check, `verify`.
 - **A pinned supply chain the build enforces.** Actions pinned to commit SHAs, checksum-verified binaries, digest-pinned images, and npm installs that run no dependency's install scripts, with every package's registry signature verified.
@@ -66,7 +66,7 @@ It combines the strongest ideas of thirty-nine templates and references, includi
 | `mcp-server` | MCP server on the official SDK: task tools over stdio for an AI assistant, same layers, driven in tests by a real client |
 | `py-service` | Python HTTP service on the standard library: pure domain, WSGI transport, ruff and strict mypy, layer rules enforced by an `ast`-based check |
 | `web` | React + Vite app organised by feature (bulletproof-react), import boundaries checked on every file, unit and component tests |
-| `ts-library` | TypeScript library for npm: one `exports` entry, publint and are-the-types-wrong checks on the packed tarball, tokenless trusted publishing with provenance |
+| `ts-library` | TypeScript library for npm: one `exports` entry, publint and are-the-types-wrong checks on the packed tarball, which is also installed into an empty project and imported, tokenless trusted publishing with provenance |
 | `architecture` | LikeC4 model of the system, with model rules as tests and an opt-in GitHub Pages site |
 | `release` | release-please: release pull requests, tags and `CHANGELOG.md` from Conventional Commits |
 | `devcontainer` | Dev Container with the toolchains of the features you selected |
@@ -141,7 +141,7 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 - **`verify.yml`** — on every pull request, every push to `main`, and in a merge queue: repository hygiene, chassis tests, actionlint, a security audit of the workflows with [zizmor](https://docs.zizmor.sh), and one job per module — each service job also runs the API contract and starts the service's container image to prove it answers — all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
 - **`pr-title.yml`** — pull request titles follow Conventional Commits.
 - **`copilot-setup-steps.yml`** — the environment GitHub's Copilot coding agent prepares before it works here: every toolchain the selected features need, then `node scripts/setup.mjs`. It runs on its own only when it changes.
-- **`security.yml`** — report-only scans that fail only when a scan could not run: gitleaks over new commits and weekly over history, `npm audit` for every npm lockfile, and pip-audit for the Python lockfile when that service is present.
+- **`security.yml`** — report-only scans that fail only when a scan could not run: gitleaks over new commits and weekly over history, `npm audit` for every npm lockfile, pip-audit for the Python lockfile when that service is present, and a Trivy scan of every container image the repository builds, for fixable high and critical vulnerabilities in its operating-system and language packages.
 <!-- ultra:begin go-service -->
 - **`security.yml`, Go** — govulncheck, reporting only vulnerabilities in code the Go service actually calls.
 <!-- ultra:end go-service -->
