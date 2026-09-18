@@ -14,6 +14,12 @@
  *   5. Every directory under docs/ has a README.md linking the documents beside it, and
  *      docs/README.md links each of those indexes. A document nothing links to is a document
  *      nobody revises: it is how a docs tree becomes a pile of stale forks of the same page.
+ *   6. Every relative Markdown link resolves, inside the repository. Code spans and fenced blocks are
+ *      not links.
+ *   7. Nothing is tracked under a name no tool reads: the singular AGENT.md, or a spelling that
+ *      differs from AGENTS.md only in case, which a case-insensitive filesystem will hide.
+ *   8. Copilot's .github/agents and .github/prompts files carry the frontmatter they are selected
+ *      on and defer to AGENTS.md, so the vendor surface never becomes a second rulebook.
  *
  *   node scripts/check-docs.mjs
  *
@@ -21,7 +27,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const CANONICAL = "AGENTS.md";
@@ -31,6 +37,14 @@ export const IMPORT_TEXT = "@AGENTS.md\n";
 export const POINTERS = ["GEMINI.md", ".github/copilot-instructions.md"];
 /** Long enough for a sentence and a link, short enough that instructions cannot hide here. */
 export const MAX_POINTER_LINES = 20;
+/** The singular name some tools once looked for: a file nothing reads today. */
+export const WRONG_NAME = "AGENT.MD";
+/** Copilot's own customization surface: task-shaped wrappers, never a second set of rules. */
+export const VENDOR_DIRS = [
+  // An agent file is chosen by name; a prompt file is chosen by its filename, so it needs no name field.
+  { dir: ".github/agents", suffix: ".agent.md", requires: ["name", "description"] },
+  { dir: ".github/prompts", suffix: ".prompt.md", requires: ["description"] },
+];
 export const SKILLS_DIR = ".claude/skills";
 export const MAX_SKILL_NAME = 64;
 export const MAX_SKILL_DESCRIPTION = 1024;
@@ -91,6 +105,79 @@ function checkSkills(root, tracked, failures) {
   return skills.size;
 }
 
+/**
+ * Every Markdown link that points at a path, with the line it sits on.
+ *
+ * Code is skipped, both fenced blocks and inline spans: a page that documents link syntax, or shows
+ * a command containing brackets, is not making a link, and a checker that cannot tell the difference
+ * teaches people to ignore it.
+ */
+export function markdownLinks(text) {
+  const links = [];
+  let fenced = false;
+  normalize(text).split("\n").forEach((raw, index) => {
+    if (/^\s{0,3}(```|~~~)/.test(raw)) {
+      fenced = !fenced;
+      return;
+    }
+    if (fenced) return;
+    const line = raw.replace(/`[^`]*`/g, "");
+    for (const [, target] of line.matchAll(/\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
+      links.push({ target, line: index + 1 });
+    }
+  });
+  return links;
+}
+
+const EXTERNAL = /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i;
+
+function checkLinks(root, tracked, failures) {
+  let checked = 0;
+  for (const file of tracked.filter((p) => p.endsWith(".md"))) {
+    for (const { target, line } of markdownLinks(readFileSync(join(root, file), "utf8"))) {
+      if (EXTERNAL.test(target)) continue;
+      const [path] = target.split("#");
+      if (path === "") continue;
+      checked++;
+      let decoded = path;
+      try {
+        decoded = decodeURIComponent(path);
+      } catch {
+        // A target that is not valid percent-encoding is checked as written.
+      }
+      const resolved = join(root, dirname(file), decoded);
+      const inside = relative(root, resolved);
+      if (inside.startsWith("..") || isAbsolute(inside)) {
+        // It may resolve on the author's disk; on GitHub, and in every clone, it goes nowhere.
+        failures.push(`\`${file}:${line}\` links to \`${target}\`, outside the repository. Link to something in it, or use a full URL.`);
+      } else if (!existsSync(resolved)) {
+        failures.push(`\`${file}:${line}\` links to \`${target}\`, which does not exist. A link nobody can follow is worse than no link.`);
+      }
+    }
+  }
+  return checked;
+}
+
+function checkVendorFiles(root, tracked, failures) {
+  for (const { dir, suffix, requires } of VENDOR_DIRS) {
+    for (const path of tracked.filter((p) => p.startsWith(`${dir}/`))) {
+      if (!path.endsWith(suffix)) {
+        failures.push(`\`${path}\` is under \`${dir}/\` but is not a \`${suffix}\` file, so nothing loads it.`);
+        continue;
+      }
+      const text = readFileSync(join(root, path), "utf8");
+      const fields = frontmatter(text);
+      const missing = requires.filter((field) => !(fields ?? {})[field]);
+      if (missing.length > 0) {
+        failures.push(`\`${path}\` needs frontmatter with ${missing.join(" and ")}; that is what it is selected on.`);
+      }
+      if (!text.includes(CANONICAL)) {
+        failures.push(`\`${path}\` never names ${CANONICAL}. These files wrap a task; the rules stay in one place.`);
+      }
+    }
+  }
+}
+
 function checkDocsTree(root, tracked, failures) {
   const docs = tracked.filter((p) => p.startsWith(`${DOCS_DIR}/`) && p.endsWith(".md"));
   if (docs.length === 0) return 0;
@@ -137,6 +224,18 @@ export function checkDocs(root = process.cwd()) {
   const nested = canonical.filter((p) => p !== CANONICAL);
   if (nested.length > 0) failures.push(`${nested.join(", ")} also claim to be agent instructions. Keep one file; the second copy is what drifts.`);
 
+  // A case-insensitive filesystem will happily track `agents.md`, and the tools that look for the
+  // exact name will not find it. The singular `AGENT.md` is the same mistake with a different spelling.
+  for (const path of tracked) {
+    const name = path.split("/").pop();
+    const upper = name.toUpperCase();
+    if (upper === WRONG_NAME) {
+      failures.push(`\`${path}\` is the singular name; tools read \`${CANONICAL}\`. Rename it, or its contents are instructions nobody loads.`);
+    } else if ((upper === CANONICAL.toUpperCase() && name !== CANONICAL) || (upper === IMPORT_FILE.toUpperCase() && name !== IMPORT_FILE)) {
+      failures.push(`\`${path}\` differs from \`${CANONICAL}\`/\`${IMPORT_FILE}\` only in case. A case-insensitive filesystem hides that; the tools looking for the exact name do not.`);
+    }
+  }
+
   if (!tracked.includes(IMPORT_FILE)) failures.push(`\`${IMPORT_FILE}\` is missing or untracked. It must import ${CANONICAL}.`);
   else if (normalize(read(IMPORT_FILE)) !== IMPORT_TEXT) {
     failures.push(`\`${IMPORT_FILE}\` must be exactly \`${IMPORT_TEXT.trim()}\` and nothing else, so it cannot disagree with ${CANONICAL}.`);
@@ -157,9 +256,11 @@ export function checkDocs(root = process.cwd()) {
     }
   }
 
+  checkVendorFiles(root, tracked, failures);
   const skillCount = checkSkills(root, tracked, failures);
   const docCount = checkDocsTree(root, tracked, failures);
-  return { ok: failures.length === 0, failures, skillCount, docCount };
+  const linkCount = checkLinks(root, tracked, failures);
+  return { ok: failures.length === 0, failures, skillCount, docCount, linkCount };
 }
 
 function main() {
@@ -173,7 +274,7 @@ function main() {
     for (const failure of result.failures) console.error(`  ${failure}\n`);
     return 1;
   }
-  console.log(`check-docs: OK. ${result.docCount} documents indexed, ${result.skillCount} skill(s).`);
+  console.log(`check-docs: OK. ${result.docCount} documents indexed, ${result.skillCount} skill(s), ${result.linkCount} link(s) resolve.`);
   return 0;
 }
 

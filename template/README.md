@@ -31,8 +31,8 @@ Strict JSON has no comments, so JSON files carry no markers; a feature that need
 1. Create the module directory, self-contained: its own manifest and lockfile, tests, a `verify` script (or the Go toolchain's checks), and a README.
 2. Add the feature to `features.json` with the paths it owns, and to the presets it belongs in.
 3. If `setup` and `verify` must run it, add it to `scripts/modules.mjs`. The template tests fail if a module there is not owned by exactly one feature.
-4. In `.github/workflows/verify.yml`, add its job inside a marker block, and list the job under `verify.needs` inside another. `check-hygiene` fails if the job is missing from the gate.
-5. Add its Dependabot entries, and its lines in `README.md`, `AGENTS.md` and wherever else it belongs, each inside markers.
+4. In `.github/workflows/verify.yml`, add its job inside a marker block, and list the job under `verify.needs` inside another. `check-hygiene` fails if the job is missing from the gate. If it needs a toolchain no other feature installs, add the setup step to `copilot-setup-steps.yml` inside a marker block, and unconditionally to the preset job in `template-test.yml`, which generates every preset from one job definition.
+5. Add its Dependabot entries, and its lines in `README.md`, `AGENTS.md` and wherever else it belongs, each inside markers. A new task service also joins `TASK_SERVICES` in `scripts/check-contract.mjs`, with the command that starts it, and must pass every case in `scripts/contract/tasks-api.json`.
 6. Verify, as described below. Add a preset to the matrix in `template-test.yml` if you created one.
 
 ## Verifying a change to the template

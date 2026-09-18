@@ -18,6 +18,9 @@ from api_py.domain.task import DomainError, DomainErrorCode, Task, parse_status
 
 # A request body larger than this is refused before it is parsed.
 MAX_BODY_BYTES: Final = 1024 * 1024
+# How much of a refused body is still read, so the client can receive the 400 instead of a reset
+# connection. The standard-library server has no request timeout, so this bounds the work instead.
+MAX_DRAIN_BYTES: Final = 8 * MAX_BODY_BYTES
 
 STATUS_BY_CODE: Final[dict[DomainErrorCode, int]] = {
     "EMPTY_TITLE": 422,
@@ -39,6 +42,7 @@ REASON: Final[dict[int, str]] = {
 }
 
 _TASK_PATH = re.compile(r"^/api/tasks/([^/]+)(/status)?$")
+_MALFORMED_ESCAPE = re.compile(r"%(?![0-9A-Fa-f]{2})")
 
 StartResponse = Callable[[str, list[tuple[str, str]]], Any]
 WSGIApplication = Callable[[dict[str, Any], StartResponse], Iterable[bytes]]
@@ -86,13 +90,17 @@ def create_app(service: TaskService, log: Log) -> WSGIApplication:
             f"{status} {REASON[status]}",
             [("content-type", "application/json"), ("content-length", str(len(payload)))],
         )
-        return [payload]
+        # A HEAD response describes the GET response and carries no body; WSGI servers send whatever
+        # the application returns, so leaving it out is this code's job.
+        return [b""] if environ.get("REQUEST_METHOD") == "HEAD" else [payload]
 
     return app
 
 
 def _route(service: TaskService, environ: dict[str, Any]) -> tuple[int, object]:
+    # HEAD is answered wherever GET is, as HTTP requires.
     method = environ.get("REQUEST_METHOD", "GET")
+    method = "GET" if method == "HEAD" else method
     path = _path(environ)
 
     if path == "/healthz":
@@ -110,6 +118,8 @@ def _route(service: TaskService, environ: dict[str, Any]) -> tuple[int, object]:
     if match is None:
         return 404, {"error": "not found"}
 
+    if _MALFORMED_ESCAPE.search(match.group(1)):
+        raise BadRequestError("malformed path")
     task_id = unquote(match.group(1))
     if match.group(2) is None:
         return (200, as_json(service.get(task_id))) if method == "GET" else _not_allowed()
@@ -145,12 +155,16 @@ def _read_object(environ: dict[str, Any], allowed: list[str]) -> dict[str, objec
         length = int(environ.get("CONTENT_LENGTH") or 0)
     except ValueError:
         raise invalid from None
-    if length > MAX_BODY_BYTES:
-        raise invalid
     stream = environ.get("wsgi.input")
+    if length > MAX_BODY_BYTES:
+        _drain(stream, min(length, MAX_DRAIN_BYTES))
+        raise invalid
     raw = stream.read(length) if stream is not None and length > 0 else b""
+    # An empty body is not an empty object: api-go and api-ts refuse it as malformed, and so does this.
+    if raw.strip() == b"":
+        raise invalid
     try:
-        body = json.loads(raw or b"{}")
+        body = json.loads(raw)
     except ValueError:
         raise invalid from None
     if not isinstance(body, dict):
@@ -158,6 +172,15 @@ def _read_object(environ: dict[str, Any], allowed: list[str]) -> dict[str, objec
     if any(key not in allowed for key in body):
         raise invalid
     return body
+
+
+def _drain(stream: Any, remaining: int) -> None:
+    """Reads and discards what the client is still sending, in bounded chunks."""
+    while stream is not None and remaining > 0:
+        chunk = stream.read(min(remaining, 64 * 1024))
+        if not chunk:
+            return
+        remaining -= len(chunk)
 
 
 def _optional_string(body: dict[str, object], key: str) -> str:

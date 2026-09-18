@@ -17,7 +17,7 @@ Each of these fails `scripts/check-hygiene.mjs` or a module's own checks. Do not
 - **Least privilege in workflows.** Top-level `permissions: contents: read`, widened per job only where needed. Every job has `timeout-minutes`. Event values such as branch names reach shell scripts through `env:`, never as `${{ }}` inside `run:`.
 - **Repository shape.** No `.env` files, no dependency directories, no file over 4 MB, no invalid JSON, nothing both tracked and ignored.
 - **Independent modules.** Every module has its own manifest, lockfile and CI job. Never import across module directories ([ADR-0004](docs/adr/0004-independent-modules.md)).
-- **One set of instructions.** This file is the only one. `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` point here and carry no rules of their own, and every document under `docs/` is linked from the index beside it. `scripts/check-docs.mjs` enforces both.
+- **One set of instructions.** This file is the only one. `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` point here and carry no rules of their own; files under `.github/prompts/` and `.github/agents/` wrap a task and defer to this file; no `AGENT.md` and no case variants of these names. Every document under `docs/` is linked from the index beside it, and every relative link resolves. `scripts/check-docs.mjs` enforces all of it ([ADR-0006](docs/adr/0006-one-set-of-agent-instructions.md), [ADR-0009](docs/adr/0009-where-agent-adapters-and-skills-live.md)).
 
 ## Architecture
 
@@ -65,11 +65,13 @@ Everything consumers may import is exported from `src/index.ts`; the `exports` m
 The LikeC4 model in `architecture/model/` describes the system. Update it in the same pull request as a structural change. Rules it must satisfy live in `architecture/rules.mjs`, each with a test showing it can fail.
 <!-- ultra:end architecture -->
 
-When both services exist, keep them behaviourally identical: the same routes, status codes and configuration variables.
+Every task service present — `api-go`, `api-ts`, `api-py` — answers the same routes with the same status codes and reads the same configuration variables. `scripts/check-contract.mjs` holds each one to the cases in `scripts/contract/tasks-api.json`; change the contract there first, then every service, never one service alone.
 
 ## Skills
 
-Step-by-step procedures for recurring tasks live in `.claude/skills/<name>/SKILL.md`: recording a decision, and adding an endpoint to each service present. Follow the matching skill instead of improvising the procedure.
+Step-by-step procedures for recurring tasks live in `.claude/skills/<name>/SKILL.md`: recording a decision, and adding an endpoint or tool to each module present. Follow the matching skill instead of improvising the procedure. They are plain Markdown, so any assistant can read them from there; Claude Code also loads them by name. Keep them as real files, never symlinks: the repository must work in a Windows checkout.
+
+An assistant working in GitHub's cloud prepares its environment with `.github/workflows/copilot-setup-steps.yml`, which installs every module's dependencies the way `node scripts/setup.mjs` does locally.
 
 ## Documentation
 

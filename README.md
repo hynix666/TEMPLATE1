@@ -5,12 +5,12 @@
 <!-- ultra:begin template -->
 **A GitHub repository template that starts a project with the verification, supply-chain and architecture discipline most projects only add after their first incident — and lets you choose the stack.**
 
-It combines the strongest ideas of twenty-five templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
+It combines the strongest ideas of thirty-four templates and references, including NexusPrompt's own workflow. [template/ANALYSIS.md](template/ANALYSIS.md) records what was taken from each and what was left out, and why.
 
 - **One gate.** `node scripts/verify.mjs` runs what CI runs, and CI reports a single required check, `verify`.
 - **A pinned supply chain the build enforces.** Actions pinned to commit SHAs, checksum-verified binaries, digest-pinned images.
 - **Repository hygiene checks.** A tracked `.env`, a vendored `node_modules`, a truncated `.gitignore`, a 50 MB blob, or a CI job left out of the gate each fail the build.
-- **Clean Architecture services whose layer rules are tests**, in Go, TypeScript and Python, with identical APIs — the same structure proved three times, in three toolchains.
+- **Clean Architecture services whose layer rules are tests**, in Go, TypeScript and Python — the same structure proved in three toolchains, and the same API proved by one contract every service is started and checked against.
 - **A feature-sliced web app and a publishable library**, each with its import or packaging rules checked.
 - **An MCP server for agents**, built on the official SDK and tested through a real client, not a mock.
 - **Architecture as code.** A LikeC4 model with rules checked in CI.
@@ -76,7 +76,7 @@ Init deletes the features you did not select, keeps or removes the marked blocks
 
 ## Layout
 
-- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs the whole check, `check-hygiene.mjs` guards the repository's shape, `check-docs.mjs` its documentation.
+- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs the whole check, `check-hygiene.mjs` guards the repository's shape, `check-docs.mjs` its documentation, and `check-contract.mjs` holds every task service to the one API contract in `scripts/contract/`.
 <!-- ultra:begin go-service -->
 - `services/api-go/` — Go task API in Clean Architecture layers. [README](services/api-go/README.md)
 <!-- ultra:end go-service -->
@@ -99,7 +99,7 @@ Init deletes the features you did not select, keeps or removes the marked blocks
 - `architecture/` — LikeC4 model of the system. [README](architecture/README.md)
 <!-- ultra:end architecture -->
 - `docs/` — [the documentation index](docs/README.md) and the rules for keeping it true; `docs/adr/` holds the architecture decision records.
-- `.claude/skills/` — step-by-step procedures coding agents follow for recurring tasks.
+- `.claude/skills/` — step-by-step procedures coding agents follow for recurring tasks. `.github/prompts/` holds Copilot prompt files that wrap one of them; `AGENTS.md` holds the rules all of them follow.
 - `.github/` — workflows, issue forms, pull request template, Dependabot and code owners.
 
 ## Getting started
@@ -115,6 +115,8 @@ Prerequisites:
 <!-- ultra:end py-service -->
 - The GitHub CLI, only for `configure-github.mjs`.
 
+Each toolchain version is pinned once, in the file that toolchain reads: `.node-version`, `go.mod`, `.python-version`. Version managers such as mise and asdf can be configured to read those files directly, so there is no `.tool-versions` to keep in step with them.
+
 ```bash
 node scripts/setup.mjs              # install the dependencies of every module present
 node scripts/verify.mjs             # the whole check, as CI runs it
@@ -126,13 +128,18 @@ node scripts/configure-github.mjs   # apply repository settings: merging, requir
 
 ## Continuous integration
 
-- **`verify.yml`** — on every push and pull request: repository hygiene, chassis tests, actionlint, and one job per module, all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
+- **`verify.yml`** — on every push and pull request: repository hygiene, chassis tests, actionlint, and one job per module — each service job also runs the API contract and starts the service's container image to prove it answers — all feeding the aggregate **`verify`** job, which is the only required check ([ADR-0002](docs/adr/0002-one-required-check.md)).
 - **`pr-title.yml`** — pull request titles follow Conventional Commits.
-- **`security.yml`** — report-only scans that fail only when a scan could not run: gitleaks over new commits and weekly over history, and `npm audit` for every npm lockfile.
+- **`copilot-setup-steps.yml`** — the environment GitHub's Copilot coding agent prepares before it works here: every toolchain the selected features need, then `node scripts/setup.mjs`. It runs on its own only when it changes.
+- **`security.yml`** — report-only scans that fail only when a scan could not run: gitleaks over new commits and weekly over history, `npm audit` for every npm lockfile, and pip-audit for the Python lockfile when that service is present.
 <!-- ultra:begin go-service -->
 - **`security.yml`, Go** — govulncheck, reporting only vulnerabilities in code the Go service actually calls.
 <!-- ultra:end go-service -->
 - **`codeql.yml`** — CodeQL analysis; enable it by setting the repository variable `CODEQL_ENABLED=true` (needs a public repository or GitHub Advanced Security).
+- **`scorecard.yml`** — [OpenSSF Scorecard](https://scorecard.dev): an outside measurement of the practices this repository claims, published and uploaded to code scanning; enable it with `SCORECARD_ENABLED=true` on a public repository.
+<!-- ultra:begin mcp-server -->
+- **`mcp-publish.yml`** — after a release, pushes the MCP server's image to GitHub Container Registry and its `server.json` to the MCP Registry, tokenlessly; enable it with `MCP_PUBLISH_ENABLED=true` ([how](services/mcp-server/README.md#publish)).
+<!-- ultra:end mcp-server -->
 <!-- ultra:begin release -->
 - **`release.yml`** — release-please on `main`, off until `RELEASE_ENABLED=true`, which `configure-github.mjs` sets. Releases start at `0.1.0`, and each release pull request gets a dispatched `verify` run, so it can pass the required check without a personal token.
 <!-- ultra:end release -->

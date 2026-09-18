@@ -1,4 +1,5 @@
-# Report-only security scans: gitleaks over commits, and known-vulnerability audits of dependencies.
+# Report-only security scans: gitleaks over commits, and known-vulnerability audits of every
+# dependency lockfile — npm, Go and uv.
 #
 # A FINDING does not fail a job: an untuned scanner that goes red on day one teaches everyone to
 # ignore it. A job DOES fail when its scan could not run, because a scanner that errored must not
@@ -137,3 +138,38 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$code" -ne 0 ] && [ "$code" -ne 3 ]; then exit "$code"; fi
   # ultra:end go-service
+  # ultra:begin py-service
+
+  # pip-audit reads the exact versions uv.lock pins, development tools included, as npm audit does.
+  pip-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/api-py
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version-file: services/api-py/pyproject.toml
+      - name: pip-audit (report-only)
+        run: |
+          uv export --frozen --format requirements-txt --no-emit-project --output-file "$RUNNER_TEMP/requirements.txt" --quiet
+          # pip-audit exits 1 both for findings and for failing to run, so the report decides: it is
+          # written only when the scan completed.
+          uvx pip-audit==2.10.1 --requirement "$RUNNER_TEMP/requirements.txt" --no-deps --disable-pip \
+            --progress-spinner off --format json --output "$RUNNER_TEMP/pip-audit.json" || true
+          node -e '
+            const { readFileSync, appendFileSync } = require("node:fs");
+            const out = (s) => appendFileSync(process.env.GITHUB_STEP_SUMMARY, s + "\n");
+            let report = null;
+            try { report = JSON.parse(readFileSync(process.argv[1], "utf8")); } catch {}
+            // String concatenation, not template literals: see the npm audit job (SC2016).
+            if (!Array.isArray(report?.dependencies)) { out("### pip-audit could not run"); process.exit(2); }
+            const found = report.dependencies.flatMap((d) => (d.vulns || []).map((v) => d.name + " " + d.version + ": " + v.id));
+            out("### pip-audit: " + found.length + " advisory(ies) in " + report.dependencies.length + " packages, report-only");
+            for (const line of found) out("- " + line);
+          ' "$RUNNER_TEMP/pip-audit.json"
+  # ultra:end py-service

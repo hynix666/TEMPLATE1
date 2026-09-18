@@ -1,6 +1,6 @@
 {
   "$comment": "Read by template/init.mjs, and deleted with it. A feature's paths are deleted when it is not selected; content inside shared files is selected with marker lines instead. See template/README.md.",
-  "version": "1.2.0",
+  "version": "1.3.1",
   "identity": {
     "owner": "hynix666",
     "repo": "TEMPLATE1",
@@ -18,7 +18,7 @@
     },
     "mcp-server": {
       "summary": "MCP server on the Model Context Protocol SDK: tools over stdio, the same layers, driven in tests by a real client",
-      "paths": ["services/mcp-server", ".claude/skills/add-mcp-tool"]
+      "paths": ["services/mcp-server", ".claude/skills/add-mcp-tool", ".github/workflows/mcp-publish.yml"]
     },
     "py-service": {
       "summary": "Python HTTP service on the standard library: pure domain, WSGI transport, layer rules enforced by an ast-based check",

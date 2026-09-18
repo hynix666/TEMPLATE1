@@ -8,5 +8,9 @@ RUN npm ci --omit=dev
 # Node 24 runs TypeScript directly by stripping types, so the sources ship as they are.
 COPY src ./src
 USER node
+# The MCP Registry verifies that whoever publishes server.json owns this image by reading this label;
+# it must equal "name" in server.json exactly. The source label links the image to the repository.
+LABEL io.modelcontextprotocol.server.name="io.github.hynix666/template1"
+LABEL org.opencontainers.image.source="https://github.com/hynix666/TEMPLATE1"
 # No EXPOSE and no port: the protocol is stdin and stdout, so run this image with -i.
 CMD ["node", "src/main.ts"]
