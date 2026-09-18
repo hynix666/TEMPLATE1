@@ -8,8 +8,8 @@
 name: template-test
 
 on:
-  push:
-    branches: [main]
+  # Not on push to main: the ruleset admits a change only through a pull request that is up to date
+  # with main, so the commit a merge produces is the one this already generated every preset from.
   pull_request:
   # Weekly even with no commits: a runner image, a toolchain release or a registry can break a
   # generated project while the template itself stands still, and a template is judged by what it
@@ -51,17 +51,18 @@ jobs:
           version-file: services/api-py/pyproject.toml
       - uses: ./.github/actions/setup-actionlint
 
-      - name: Generate
+      # In place, on this job's own fresh checkout — exactly what an adopter runs after "Use this
+      # template". The unit tests cover --out; this covers the path people actually take.
+      - name: Initialize in place
         env:
           PRESET: ${{ matrix.preset }}
-        run: node template/init.mjs --name demo-app --owner octo-org --preset "$PRESET" --out "$RUNNER_TEMP/generated"
+        run: node template/init.mjs --name demo-app --owner octo-org --preset "$PRESET"
 
-      - name: Commit, install and verify the generated project
+      - name: Commit, install and verify the initialized project
         run: |
-          cd "$RUNNER_TEMP/generated"
-          git init -q -b main
           git add -A
           git -c user.name=ci -c user.email=ci@example.invalid commit -q -m "chore: initialize project"
+          test ! -e template || { echo "::error::template/ survived initialization"; exit 1; }
           node scripts/setup.mjs
           node scripts/verify.mjs
           actionlint -color

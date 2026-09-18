@@ -51,13 +51,36 @@ TEMPLATE1 1.x is complete in scope. It gives a project the things with no produc
 
 These stay decisions for each project, and are left out on purpose: deployment targets and infrastructure, databases and migrations, authentication, message queues, UI frameworks beyond the minimal React app, and desktop or mobile clients. Each is a product choice with more than one good answer, and a template that picks one makes every other project undo it.
 
-A new feature has to meet the five requirements in [ADR-0008](../docs/adr/0008-a-third-language-and-what-a-module-must-prove.md) and the checklist above. Anything that changes what a generated project must do is a major version.
+A new feature has to meet the five requirements in [ADR-0008](../docs/adr/0008-a-third-language-and-what-a-module-must-prove.md) and the checklist above.
+
+## Versioning
+
+The template is a product with a public contract, and its version says what a release does to the projects made from it.
+
+**The public contract** is what adopters type and what a project records: the feature ids and preset names in `features.json`, init's flags (`--name`, `--owner`, `--repo`, `--preset`, `--features`, `--out`), the `Initialized from` line init writes into `CHANGELOG.md`, which `template-update.mjs` reads back, and the required check's name, `verify`. `template/init.test.mjs` fails if a 1.x feature or preset disappears.
+
+| Bump | When | Example |
+|---|---|---|
+| **Major** | A generated project, or a person using the template, has to change something of their own to keep working | Removing or renaming a feature or preset, changing init's flags or the origin line, renaming the required check |
+| **Minor** | A new capability, with nothing an existing project has to adapt to | A new feature, preset, script or check |
+| **Patch** | Maintenance: fixes, pin updates, documentation, CI | A bug fix in a check, a Dependabot update, a clearer README |
+
+A behaviour change a project's users would notice — an API status code, a stricter check — is at least minor, even when it fixes a bug, and its release notes say so.
 
 ## Releasing the template
 
-A repository created from the template has none of its history or tags, so init writes the template's `version` from `features.json` into the new project's `CHANGELOG.md`, linking to the matching release. That line is how a project later tells which template changes it already has. To release:
+"Use this template" copies `main` as it is, not the latest release, and init writes `version` from `features.json` into every new project as the release it came from. So **`main` always equals a published release**: a pull request that bumps `version` is released the moment it merges, by `.github/workflows/template-release.yml`, which tags that commit and writes notes with `release-notes.mjs` — what changes in generated projects, grouped by the feature that owns each file, then how to take it with `template-update.mjs`, then the merged pull requests. Nothing needs running by hand; `gh release view v<version>` shows the result.
 
-1. Bump `version` in `features.json` in the pull request that completes the change (semantic versioning: a new feature is a minor bump, a change a project must adapt to is a major one).
-2. After it merges: `gh release create v<version> --generate-notes`.
+Before merging a release pull request:
 
-The template repository runs no release-please of its own: `RELEASE_ENABLED` stays unset here, because releasing is for projects generated from it.
+1. **Choose the bump** from the table above, and set `version` in `features.json` in the same pull request.
+2. **Every preset generates and verifies.** `template-test` does this on the pull request, initializing in place on a fresh checkout as an adopter does. Do not merge on a red preset.
+3. **Nothing of the template survives initialization.** Checked in every preset by `check-hygiene` (no marker lines) and by the `template-test` step that fails if `template/` remains.
+4. **The README's steps still work.** If the release changes anything *Start a project* or *Getting started* describes, follow those steps once from a fresh clone.
+5. **`configure-github.mjs` does what its header says.** If the release touches it, run `--dry-run` against a scratch repository and read the requests, then apply them there.
+6. **Manual pins are current.** [docs/toolchain-updates.md](../docs/toolchain-updates.md) lists the versions Dependabot cannot update; check each one at every minor release.
+7. **The notes will read right.** `node template/release-notes.mjs --to v<version>` prints them locally. If a change needs explaining beyond a file list — a behaviour change, a manual step — say so in the pull request description, which the notes link.
+
+After it merges, read the published release once. An `Updated to` or `Initialized from` line in a project is only as useful as the notes it points at.
+
+The template repository runs no release-please of its own: `RELEASE_ENABLED` stays unset here, because release-please is for projects generated from it.

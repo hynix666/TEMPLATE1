@@ -101,6 +101,20 @@ test("the real manifest is consistent and every marker in the tree is well forme
   assert.ok(markers > 0, "expected marker lines in the tree");
 });
 
+test("the 1.x public contract only grows: no feature or preset is removed or renamed", () => {
+  // Feature ids and preset names are what adopters type, and what template-update replays from a
+  // project's CHANGELOG. Taking one away breaks every project that used it, which is a major version.
+  const manifest = loadManifest();
+  if (!manifest.version.startsWith("1.")) return;
+  const features = ["go-service", "ts-service", "py-service", "mcp-server", "web", "ts-library", "architecture", "release", "devcontainer"];
+  const presets = ["minimal", "go-api", "py-api", "fullstack-ts", "library", "mcp", "all"];
+  assert.deepEqual(features.filter((id) => !(id in manifest.features)), [], "features removed within 1.x");
+  assert.deepEqual(presets.filter((id) => !(id in manifest.presets)), [], "presets removed within 1.x");
+  for (const preset of presets.filter((id) => id !== "all")) {
+    for (const feature of manifest.presets[preset]) assert.ok(manifest.presets.all.includes(feature), `${preset}: ${feature} is not in all`);
+  }
+});
+
 test("every module directory scripts/modules.mjs knows is owned by exactly one feature", () => {
   const manifest = loadManifest();
   for (const module of MODULES) {
