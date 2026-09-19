@@ -208,6 +208,39 @@ export function recordOrigin(changelog, manifest, selected, file = "CHANGELOG.md
   return changelog.replace(heading, `${heading}\n\n- Initialized from [${repo} ${tag}](https://github.com/${owner}/${repo}/releases/tag/${tag}) with ${features}.`);
 }
 
+/** The README line init replaces with a sentence on what the project is. Invisible where Markdown renders. */
+export const DESCRIPTION_ANCHOR = "<!-- project description -->";
+const WRITTEN_BY_INIT = "<!-- Written by init from the selected features: replace it with what this project is for. -->";
+
+/**
+ * A sentence on what a new project is, from the features that are part of the product. It is true the day
+ * init runs; the owner replaces it once the project is more than its starting point.
+ */
+export function describeProject(manifest, selected) {
+  const parts = [...selected].map((id) => manifest.features[id].describes).filter(Boolean);
+  if (parts.length === 0) return "No application code yet: the checks, CI and agent instructions are in place for the first module.";
+  const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
+  return `Starts as ${list}.`;
+}
+
+/** --description is one line of prose; a newline or a comment marker would break the README around it. */
+export function validateDescription(text) {
+  const sentence = text.trim();
+  if (sentence === "" || sentence.length > 300 || /[\r\n]/.test(sentence) || sentence.includes("<!--") || sentence.includes("-->")) {
+    throw new InitError("--description must be one line of 1-300 characters, with no HTML comment.");
+  }
+  return sentence;
+}
+
+/** Writes the description at the anchor. A generated one carries a note saying so; the owner's own does not. */
+export function recordDescription(readme, sentence, generated, file = "README.md") {
+  const lines = readme.split("\n");
+  const at = lines.findIndex((line) => line.trim() === DESCRIPTION_ANCHOR);
+  if (at === -1) throw new InitError(`${file} has no "${DESCRIPTION_ANCHOR}" line to write the project description at.`);
+  lines.splice(at, 1, ...(generated ? [WRITTEN_BY_INIT, sentence] : [sentence]));
+  return lines.join("\n");
+}
+
 function gitTracked(root) {
   try {
     return execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
@@ -226,7 +259,7 @@ function assertClean(root) {
 }
 
 /** Builds the complete result in memory. Nothing is written until every file has been processed. */
-export function plan(root, manifest, selected, identity) {
+export function plan(root, manifest, selected, identity, description = { sentence: describeProject(manifest, selected), generated: true }) {
   const removed = removedPaths(manifest, selected);
   const known = new Set(Object.keys(manifest.features));
   const result = { deleted: [], files: [] };
@@ -244,6 +277,7 @@ export function plan(root, manifest, selected, identity) {
     const text = bytes.toString("utf8");
     let next = replaceIdentity(applyMarkers(text, selected, known, file), manifest.identity, identity);
     if (file === "CHANGELOG.md") next = recordOrigin(next, manifest, selected, file);
+    if (file === "README.md") next = recordDescription(next, description.sentence, description.generated, file);
     result.files.push({ file, data: next, changed: next !== text });
   }
   return result;
@@ -304,6 +338,10 @@ async function ask(manifest, values) {
       if (Object.hasOwn(manifest.presets, answer)) values.preset = answer;
       else values.features = answer.split(",").map((part) => ids[Number(part.trim()) - 1] ?? part.trim()).join(",");
     }
+    if (values.description === undefined) {
+      const answer = (await rl.question("One sentence on what this project does (empty for one built from the features): ")).trim();
+      if (answer !== "") values.description = answer;
+    }
   } catch (err) {
     rl.close();
     throw err;
@@ -322,8 +360,9 @@ const USAGE = `Usage:
   node template/init.mjs                     in a terminal: asks for everything the arguments leave out
   node template/init.mjs --list
   node template/init.mjs [--name <project>] [--owner <github-owner>] (--preset <preset> | --features <a,b>)
-                         [--repo <repository>] [--out <directory>] [--dry-run]
-  --owner and --repo default to the origin remote, and --name to the repository name.`;
+                         [--repo <repository>] [--description <sentence>] [--out <directory>] [--dry-run]
+  --owner and --repo default to the origin remote, and --name to the repository name.
+  --description is written under the README's title; without it, a sentence is built from the features.`;
 
 export async function main(argv = process.argv.slice(2), root = ROOT) {
   const { values } = parseArgs({
@@ -333,6 +372,7 @@ export async function main(argv = process.argv.slice(2), root = ROOT) {
       name: { type: "string" },
       owner: { type: "string" },
       repo: { type: "string" },
+      description: { type: "string" },
       preset: { type: "string" },
       features: { type: "string" },
       out: { type: "string" },
@@ -369,12 +409,15 @@ export async function main(argv = process.argv.slice(2), root = ROOT) {
 
   const selected = resolveSelection(manifest, values);
   const identity = validateIdentity(values);
+  const description = values.description === undefined
+    ? { sentence: describeProject(manifest, selected), generated: true }
+    : { sentence: validateDescription(values.description), generated: false };
 
   const out = values.out === undefined ? null : resolve(values.out);
   if (out === null) assertClean(root);
   else if (existsSync(out) && readdirSync(out).length > 0) throw new InitError(`--out ${out} exists and is not empty.`, 2);
 
-  const result = plan(root, manifest, selected, identity);
+  const result = plan(root, manifest, selected, identity, description);
   const rewritten = result.files.filter((f) => f.changed).length;
   const summary = `${identity.name} (${identity.owner}/${identity.repo}) with ${[...selected].join(", ") || "no features"}: ` +
     `${result.deleted.length} file(s) deleted, ${rewritten} rewritten.`;

@@ -57,7 +57,7 @@ A new feature has to meet the five requirements in [ADR-0008](../docs/adr/0008-a
 
 The template is a product with a public contract, and its version says what a release does to the projects made from it.
 
-**The public contract** is what adopters type and what a project records: the feature ids and preset names in `features.json`, init's flags (`--name`, `--owner`, `--repo`, `--preset`, `--features`, `--out`), the `Initialized from` line init writes into `CHANGELOG.md`, which `template-update.mjs` reads back, and the required check's name, `verify`. `template/init.test.mjs` fails if a 1.x feature or preset disappears.
+**The public contract** is what adopters type and what a project records: the feature ids and preset names in `features.json`, init's flags (`--name`, `--owner`, `--repo`, `--description`, `--preset`, `--features`, `--out`), the `Initialized from` line init writes into `CHANGELOG.md`, which `template-update.mjs` reads back, and the required check's name, `verify`. `template/init.test.mjs` fails if a 1.x feature or preset disappears.
 
 | Bump | When | Example |
 |---|---|---|
