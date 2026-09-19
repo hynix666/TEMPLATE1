@@ -187,11 +187,15 @@ Dependabot proposes grouped updates weekly for every ecosystem present, SHA-pinn
 This project was generated from TEMPLATE1, and `CHANGELOG.md` records the release it came from. When a later release fixes something you want, `scripts/template-update.mjs` brings the change in: it regenerates the project as the old and the new release would have made it, with this project's name and features, and applies the difference as a three-way merge. What you changed yourself is kept, and a conflict is left to resolve like any merge conflict.
 
 ```bash
-node scripts/template-update.mjs --to v1.4.0 --dry-run   # what would change
-node scripts/template-update.mjs --to v1.4.0             # apply, then review, verify and commit
+node scripts/template-update.mjs --to vX.Y.Z --dry-run   # what would change
+node scripts/template-update.mjs --to vX.Y.Z             # apply, then review, verify and commit
 ```
 
-A project generated before v1.4.0 does not have the script yet. Run it once from a clone of the template, with the project as the working directory — `node ../TEMPLATE1/scripts/template-update.mjs --to v1.4.0` — and the update brings the script in with everything else.
+Updates only move forward: a release older than the one the project is on is refused.
+<!-- ultra:begin template -->
+
+A project generated before v1.4.0 does not have the script yet. Run it once from a clone of the template, with the project as the working directory — `node ../TEMPLATE1/scripts/template-update.mjs --to vX.Y.Z` — and the update brings the script in with everything else.
+<!-- ultra:end template -->
 
 The `update-from-template` skill walks an agent through the whole procedure.
 

@@ -125,6 +125,14 @@ test("a change to a file the project deleted is skipped, not forced back", () =>
   assert.equal(existsSync(join(dir, "SECURITY.md")), false);
 });
 
+test("it refuses to go back to an older release, and changes nothing", () => {
+  const dir = project("downgrade");
+  const before = git(dir, "rev-parse", "HEAD");
+  assert.throws(() => run(dir, { to: FROM }), /older than/);
+  assert.equal(git(dir, "status", "--porcelain"), "");
+  assert.equal(git(dir, "rev-parse", "HEAD"), before);
+});
+
 test("it refuses to start without what it needs", () => {
   git(template, "checkout", "-q", FROM);
   const dir = project("refusals");
