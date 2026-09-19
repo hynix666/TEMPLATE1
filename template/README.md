@@ -24,7 +24,7 @@ It has no dependencies beyond Node 24, validates every argument before touching 
 
 Strict JSON has no comments, so JSON files carry no markers; a feature that needs a JSON file owns the whole file as a path. A block can depend on one feature only; content that should appear only when two features are both selected cannot be expressed, and is avoided by design (the architecture model links each service to the user rather than to the web app).
 
-**Identity.** The template is a working project under a real identity — owner `hynix666`, repository `TEMPLATE1`, name `template1` — so it verifies green before anyone initializes it, the way CleanArchitecture's `sourceName` does. Init replaces those three strings in every text file, through placeholders so no replacement can rewrite another's output. Never write them in a form that should survive initialization.
+**Identity.** The template is a working project under a real identity — owner `hynix666`, repository `TEMPLATE1`, name `template1` — so it verifies green before anyone initializes it. Init replaces those three strings in every text file, through placeholders so no replacement can rewrite another's output. Never write them in a form that should survive initialization.
 
 ## Adding a feature
 
