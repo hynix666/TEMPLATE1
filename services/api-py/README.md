@@ -9,7 +9,7 @@ The task API in Python: the same routes, the same status codes and the same conf
 ## Run it
 
 ```bash
-uv sync
+uv sync --locked
 uv run --directory src python -m api_py.main     # PORT=8080 by default
 ```
 
