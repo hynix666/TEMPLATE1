@@ -164,10 +164,13 @@ export function applyMarkers(text, selected, known, file = "<text>") {
 /**
  * Two passes through placeholders, so no replacement can rewrite the output of another — a project
  * named after the template's owner would otherwise be renamed a second time. The owner/repo pair
- * goes first, so a URL keeps the owner and repository it names even when the two are equal.
+ * goes first, so a URL keeps the owner and repository it names even when the two are equal. An npm
+ * scope comes before it and is lowercased: npm rejects a new package name with capitals, while GitHub
+ * names keep the owner's case.
  */
 export function replaceIdentity(text, from, to) {
   const pairs = [
+    [`@${from.owner}/${from.name}`, `@${to.owner.toLowerCase()}/${to.name}`],
     [`${from.owner}/${from.repo}`, `${to.owner}/${to.repo}`],
     [from.repo, to.repo],
     [from.name, to.name],
@@ -350,7 +353,7 @@ export async function main(argv = process.argv.slice(2), root = ROOT) {
   const origin = originDefaults(manifest, readOrigin(root));
   values.owner ??= origin?.owner;
   values.repo ??= origin?.repo;
-  values.name ??= origin ? toProjectName(origin.repo) : undefined;
+  values.name ??= values.repo === undefined ? undefined : toProjectName(values.repo);
 
   const interactive = process.stdin.isTTY && process.stdout.isTTY &&
     (values.preset === undefined && values.features === undefined);

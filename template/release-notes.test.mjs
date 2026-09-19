@@ -55,6 +55,6 @@ test("a shared file changed only inside its template block is template-only; any
 });
 
 test("a release that changes nothing projects have says so", () => {
-  const notes = render({ to: "v9.9.9", from: "v9.9.8", ...classify([["M", "template/ANALYSIS.md"]], manifest) });
+  const notes = render({ to: "v9.9.9", from: "v9.9.8", ...classify([["M", "template/README.md"]], manifest) });
   assert.match(notes, /Nothing: every change in this release is template-only\./);
 });
