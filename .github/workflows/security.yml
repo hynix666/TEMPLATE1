@@ -111,6 +111,7 @@ jobs:
   # the audits above can see those. Only fixable high and critical findings are listed, since only those
   # can be acted on. Trivy runs as the CLI binary, pinned by version and by the SHA-256 in the release's
   # checksums file, not through its GitHub Action. Suppress a finding only in .trivyignore, with the reason.
+  # Results go to the job summary and to the log, so a scan's outcome is readable wherever one looks.
   image-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -133,19 +134,19 @@ jobs:
         run: |
           # NUL-delimited, so a module path with a space in it stays one path.
           mapfile -d '' dockerfiles < <(git ls-files -z '*Dockerfile')
-          if [ "${#dockerfiles[@]}" -eq 0 ]; then echo "### image scan: no Dockerfiles" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          if [ "${#dockerfiles[@]}" -eq 0 ]; then echo "### image scan: no Dockerfiles" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
           failed=0
           for dockerfile in "${dockerfiles[@]}"; do
             dir="$(dirname "$dockerfile")"
             image="scan-$(basename "$dir" | tr '[:upper:]' '[:lower:]'):ci"
             if ! docker build --quiet --tag "$image" "$dir" > /dev/null; then
-              echo "### image scan could not build ${dir}" >> "$GITHUB_STEP_SUMMARY"
+              echo "### image scan could not build ${dir}" | tee -a "$GITHUB_STEP_SUMMARY"
               failed=1
               continue
             fi
             if ! ./trivy image --quiet --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
                 --ignorefile .trivyignore --format json --output "$RUNNER_TEMP/trivy.json" "$image"; then
-              echo "### image scan could not run on ${dir}" >> "$GITHUB_STEP_SUMMARY"
+              echo "### image scan could not run on ${dir}" | tee -a "$GITHUB_STEP_SUMMARY"
               failed=1
               continue
             fi
@@ -158,7 +159,7 @@ jobs:
                 echo "|---|---|---|---|---|"
                 jq -r '.Results[]?.Vulnerabilities[]? | "| \(.Severity) | \(.VulnerabilityID) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion) |"' "$RUNNER_TEMP/trivy.json" | head -50
               fi
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | tee -a "$GITHUB_STEP_SUMMARY"
           done
           exit "$failed"
 
