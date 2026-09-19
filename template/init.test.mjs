@@ -6,8 +6,8 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { MODULES } from "../scripts/modules.mjs";
 import {
-  applyMarkers, InitError, loadManifest, MARKER_RE, originDefaults, originIdentity, removedPaths, replaceIdentity, resolveSelection, ROOT,
-  toProjectName, validateIdentity, validateManifest,
+  applyMarkers, DESCRIPTION_ANCHOR, describeProject, InitError, loadManifest, MARKER_RE, originDefaults, originIdentity, recordDescription,
+  removedPaths, replaceIdentity, resolveSelection, ROOT, toProjectName, validateDescription, validateIdentity, validateManifest,
 } from "./init.mjs";
 
 test("the template's own remote is never used as the project's identity", () => {
@@ -88,6 +88,30 @@ test("selection takes exactly one of preset or features and rejects unknown name
   assert.throws(() => resolveSelection(manifest, {}), /exactly one/);
   assert.throws(() => resolveSelection(manifest, { preset: "all", features: "web" }), /exactly one/);
   assert.throws(() => resolveSelection(manifest, { features: "web,kubernetes" }), /Unknown feature\(s\): kubernetes/);
+});
+
+test("the default description names the product features, and says so when there are none", () => {
+  const manifest = loadManifest();
+  assert.equal(describeProject(manifest, new Set(["ts-service"])), "Starts as a TypeScript task API.");
+  assert.equal(describeProject(manifest, new Set(["ts-service", "web", "architecture", "release"])), "Starts as a TypeScript task API and a React web app.");
+  assert.equal(
+    describeProject(manifest, new Set(["go-service", "py-service", "ts-library"])),
+    "Starts as a Go task API, a Python task API and a TypeScript library for npm.",
+  );
+  // Tooling features describe how the project is built, not what it is.
+  assert.match(describeProject(manifest, new Set(["architecture", "release", "devcontainer"])), /^No application code yet/);
+  assert.match(describeProject(manifest, new Set()), /^No application code yet/);
+});
+
+test("a given description is one line of prose, and lands at the README anchor with no note", () => {
+  assert.equal(validateDescription("  Tracks work for the support team.  "), "Tracks work for the support team.");
+  for (const bad of ["", "   ", "two\nlines", "x".repeat(301), "hidden <!-- note -->"]) {
+    assert.throws(() => validateDescription(bad), InitError, JSON.stringify(bad));
+  }
+  const readme = `# app\n\n[![verify](x)](y)\n\n${DESCRIPTION_ANCHOR}\n\n## Getting started\n`;
+  assert.equal(recordDescription(readme, "Tracks work.", false), "# app\n\n[![verify](x)](y)\n\nTracks work.\n\n## Getting started\n");
+  assert.match(recordDescription(readme, "Starts as a web app.", true), /\n<!-- Written by init[^\n]*-->\nStarts as a web app\.\n/);
+  assert.throws(() => recordDescription("# app\n", "Tracks work.", false), /no "<!-- project description -->" line/);
 });
 
 test("identity input is validated at the boundary", () => {
@@ -201,12 +225,25 @@ test("every preset generates a project that passes its own chassis checks and do
       assert.doesNotThrow(() => execFileSync("node", [check], { cwd: out, stdio: "pipe" }), `${preset}: ${check}`);
     }
     const readme = readFileSync(join(out, "README.md"), "utf8");
+    assert.ok(!readme.includes(DESCRIPTION_ANCHOR), `${preset}: README keeps the description anchor`);
+    assert.ok(readme.includes(`\n${describeProject(manifest, new Set(selected))}\n`), `${preset}: README has no description`);
     for (const [id, feature] of Object.entries(manifest.features).filter(([id]) => !selected.includes(id))) {
       for (const path of feature.paths) {
         assert.ok(!readme.includes(`](${path}`) && !readme.includes(`\`${path}`), `${preset}: README still points at ${path} (${id})`);
       }
     }
   }
+});
+
+test("--description is written under the README title, in place of the generated sentence", (t) => {
+  const out = mkdtempSync(join(tmpdir(), "init-"));
+  t.after(() => rmSync(out, { recursive: true, force: true }));
+  rmSync(out, { recursive: true });
+  const args = ["template/init.mjs", "--name", "demo-app", "--owner", "octo", "--preset", "minimal", "--description", "Tracks work for the support team.", "--out", out];
+  execFileSync("node", args, { cwd: ROOT, stdio: "pipe" });
+  const readme = readFileSync(join(out, "README.md"), "utf8");
+  assert.match(readme, /^# demo-app\n\n\[!\[verify\][^\n]*\n\nTracks work for the support team\.\n/);
+  assert.doesNotMatch(readme, /Written by init|No application code yet/);
 });
 
 test("init --out writes a project with no template residue", (t) => {
