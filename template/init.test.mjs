@@ -64,6 +64,16 @@ test("identity replacement never rewrites its own output", () => {
   assert.equal(replaceIdentity(text, from, to), "github.com/octo/hynix666-app module github.com/octo/template1-x @octo");
 });
 
+test("an npm scope is lowercased, since npm rejects capitals, while GitHub names keep the owner's case", () => {
+  const from = { owner: "hynix666", repo: "TEMPLATE1", name: "template1" };
+  const to = { owner: "Acme-Corp", repo: "My.Service", name: "my-service" };
+  const text = '"name": "@hynix666/template1" import "@hynix666/template1" github.com/hynix666/TEMPLATE1 * @hynix666';
+  assert.equal(
+    replaceIdentity(text, from, to),
+    '"name": "@acme-corp/my-service" import "@acme-corp/my-service" github.com/Acme-Corp/My.Service * @Acme-Corp',
+  );
+});
+
 test("identity placeholders cannot collide with ordinary text such as a digest", () => {
   const from = { owner: "hynix666", repo: "TEMPLATE1", name: "template1" };
   const to = { owner: "octo", repo: "demo-app", name: "demo-app" };
@@ -150,6 +160,17 @@ test("in-place init removes an unselected module whole, ignored files included",
   assert.equal(existsSync(join(copy, "services/api-ts")), false);
   assert.equal(existsSync(join(copy, "template")), false);
   assert.equal(existsSync(join(copy, "services/api-go/go.mod")), true);
+});
+
+test("without --name, the project name comes from the repository being initialized", (t) => {
+  const out = join(mkdtempSync(join(tmpdir(), "init-")), "never-written");
+  t.after(() => rmSync(dirname(out), { recursive: true, force: true }));
+  const plan = execFileSync(
+    "node",
+    ["template/init.mjs", "--owner", "octo", "--repo", "My.Service", "--preset", "minimal", "--out", out, "--dry-run"],
+    { cwd: ROOT, encoding: "utf8" },
+  );
+  assert.match(plan, /^my-service \(octo\/My\.Service\)/m);
 });
 
 test("init --out writes a project with no template residue", (t) => {
