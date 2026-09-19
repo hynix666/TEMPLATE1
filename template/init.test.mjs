@@ -111,6 +111,21 @@ test("the real manifest is consistent and every marker in the tree is well forme
   assert.ok(markers > 0, "expected marker lines in the tree");
 });
 
+test("a path owned by two features, or inside another feature's or the template's, is rejected", () => {
+  const manifest = (features, templateOnly = []) => ({ version: "1.0.0", features, templateOnly, presets: {} });
+  const exists = () => true;
+  assert.match(validateManifest(manifest({ a: { paths: ["svc"] }, b: { paths: ["svc"] } }), exists).join("\n"), /"svc" is owned by both "a" and "b"/);
+  assert.match(validateManifest(manifest({ a: { paths: ["svc"] }, b: { paths: ["svc/x.md"] } }), exists).join("\n"), /"svc\/x\.md" is owned by both "b" and "a"/);
+  assert.match(validateManifest(manifest({ a: { paths: ["template/x"] } }, ["template"]), exists).join("\n"), /"template\/x" is owned by "a" and is template-only/);
+  assert.deepEqual(validateManifest(manifest({ a: { paths: ["svc"] }, b: { paths: ["svc2"] } }), exists), []);
+});
+
+test("template-test generates exactly the presets features.json defines", () => {
+  const workflow = readFileSync(join(ROOT, ".github/workflows/template-test.yml"), "utf8");
+  const matrix = /^\s*preset: \[([^\]]*)\]/m.exec(workflow)?.[1].split(",").map((p) => p.trim());
+  assert.deepEqual(matrix, Object.keys(loadManifest().presets));
+});
+
 test("the 1.x public contract only grows: no feature or preset is removed or renamed", () => {
   // Feature ids and preset names are what adopters type, and what template-update replays from a
   // project's CHANGELOG. Taking one away breaks every project that used it, which is a major version.
@@ -171,6 +186,27 @@ test("without --name, the project name comes from the repository being initializ
     { cwd: ROOT, encoding: "utf8" },
   );
   assert.match(plan, /^my-service \(octo\/My\.Service\)/m);
+});
+
+test("every preset generates a project that passes its own chassis checks and documents only what it has", (t) => {
+  const manifest = loadManifest();
+  const base = mkdtempSync(join(tmpdir(), "presets-"));
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  for (const [preset, selected] of Object.entries(manifest.presets)) {
+    const out = join(base, preset);
+    execFileSync("node", ["template/init.mjs", "--name", "demo-app", "--owner", "octo", "--preset", preset, "--out", out], { cwd: ROOT, stdio: "pipe" });
+    execFileSync("git", ["init", "-q"], { cwd: out });
+    execFileSync("git", ["add", "-A"], { cwd: out });
+    for (const check of ["scripts/check-hygiene.mjs", "scripts/check-docs.mjs"]) {
+      assert.doesNotThrow(() => execFileSync("node", [check], { cwd: out, stdio: "pipe" }), `${preset}: ${check}`);
+    }
+    const readme = readFileSync(join(out, "README.md"), "utf8");
+    for (const [id, feature] of Object.entries(manifest.features).filter(([id]) => !selected.includes(id))) {
+      for (const path of feature.paths) {
+        assert.ok(!readme.includes(`](${path}`) && !readme.includes(`\`${path}`), `${preset}: README still points at ${path} (${id})`);
+      }
+    }
+  }
 });
 
 test("init --out writes a project with no template residue", (t) => {

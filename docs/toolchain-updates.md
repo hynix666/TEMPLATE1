@@ -9,7 +9,9 @@ Weekly, grouped, as pull requests that must pass `verify` like any other.
 - **GitHub Actions** — every `uses:` is a commit SHA with its version as a comment; Dependabot moves both together.
 - **Container base images** — each `FROM` carries a digest as well as a tag, and Dependabot updates the digest within the tag. It does not move the language version in the tag; that is the next section's job.
 - **Each module's dependencies** — every npm lockfile, `go.mod`, and `uv.lock`, one group per module.
+<!-- ultra:begin devcontainer -->
 - **Dev Container features** — the toolchain features in `.devcontainer/devcontainer.json`.
+<!-- ultra:end devcontainer -->
 
 ## Language versions — moved on purpose, all at once
 
