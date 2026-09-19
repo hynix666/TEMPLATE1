@@ -68,6 +68,14 @@ export function validateManifest(manifest, exists) {
   for (const path of manifest.templateOnly) {
     if (!exists(path)) problems.push(`template-only path "${path}" does not exist.`);
   }
+  // A path under two owners is kept or deleted by whichever is processed last, not by the selection.
+  const owned = Object.entries(manifest.features).flatMap(([id, feature]) => feature.paths.map((path) => [id, path]));
+  for (const [id, path] of owned) {
+    for (const [other, outer] of owned) {
+      if ((other !== id || outer !== path) && isUnder(path, outer)) problems.push(`"${path}" is owned by both "${id}" and "${other}".`);
+    }
+    if (manifest.templateOnly.some((only) => isUnder(path, only))) problems.push(`"${path}" is owned by "${id}" and is template-only.`);
+  }
   for (const [preset, ids] of Object.entries(manifest.presets)) {
     for (const id of ids) {
       if (!Object.hasOwn(manifest.features, id)) problems.push(`preset "${preset}" names unknown feature "${id}".`);

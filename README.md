@@ -5,7 +5,9 @@
 <!-- ultra:begin template -->
 **A GitHub repository template that starts a project with the verification, supply-chain and architecture discipline most projects only add after their first incident — and lets you choose the stack.**
 
-- **One gate.** `node scripts/verify.mjs` runs what CI runs, and CI reports a single required check, `verify`.
+It is for anyone starting a service, a web app, a library or an MCP server who wants those checks in place from the first commit, not added after something breaks.
+
+- **One gate.** `node scripts/verify.mjs` runs every module's checks as CI does, and CI reports a single required check, `verify`.
 - **A pinned supply chain the build enforces.** Actions pinned to commit SHAs, checksum-verified binaries, digest-pinned images, and npm installs that run no dependency's install scripts, with every package's registry signature verified.
 - **Repository hygiene checks.** A tracked `.env`, a vendored `node_modules`, a truncated `.gitignore`, a 50 MB blob, a CI job left out of the gate, an invisible character hiding text from reviewers, or a path into someone's home directory each fail the build.
 - **Clean Architecture services whose layer rules are tests**, in Go, TypeScript and Python — the same structure proved in three toolchains, and the same API proved by one contract every service is started and checked against.
@@ -84,7 +86,7 @@ Deployment targets and infrastructure, databases and migrations, authentication,
 
 ## Layout
 
-- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs the whole check, `check-hygiene.mjs` guards the repository's shape, `check-docs.mjs` its documentation, and `check-contract.mjs` holds every task service to the one API contract in `scripts/contract/`.
+- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs every module's checks, `check-hygiene.mjs` guards the repository's shape, `check-docs.mjs` its documentation, and `check-contract.mjs` holds every task service to the one API contract in `scripts/contract/`.
 <!-- ultra:begin go-service -->
 - `services/api-go/` — Go task API in Clean Architecture layers. [README](services/api-go/README.md)
 <!-- ultra:end go-service -->
@@ -127,12 +129,17 @@ Each toolchain version is pinned once, in the file that toolchain reads: `.node-
 
 ```bash
 node scripts/setup.mjs              # install the dependencies of every module present
-node scripts/verify.mjs             # the whole check, as CI runs it
+node scripts/verify.mjs             # the checks every CI job runs on the code, in one command
 node scripts/verify.mjs <module>    # the chassis plus the named modules only
 node scripts/check-hygiene.mjs      # repository-shape rules only
 node scripts/check-docs.mjs         # agent instructions and the docs index
 node scripts/configure-github.mjs   # apply repository settings: merging, required check, security
 ```
+
+What runs where: `verify.mjs` runs each module's own checks, its tests, and the API contract against every task service, the same commands as CI. A check it cannot run is reported as skipped, never as passed. Some checks run only in CI, because they need a container engine, a network service or a CI-only tool: actionlint and zizmor on the workflows, `npm audit signatures`, building and starting each container image, and the report-only scans in `security.yml`.
+<!-- ultra:begin go-service -->
+golangci-lint runs locally when it is installed, and always in CI.
+<!-- ultra:end go-service -->
 
 ## Continuous integration
 
