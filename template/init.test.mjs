@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { MODULES } from "../scripts/modules.mjs";
 import {
-  applyMarkers, DESCRIPTION_ANCHOR, describeProject, InitError, loadManifest, MARKER_RE, originDefaults, originIdentity, recordDescription,
+  applyMarkers, DESCRIPTION_ANCHOR, describeProject, InitError, loadManifest, MARKER_RE, originDefaults, originIdentity, plan, recordDescription,
   removedPaths, replaceIdentity, resolveSelection, ROOT, toProjectName, validateDescription, validateIdentity, validateManifest,
 } from "./init.mjs";
 
@@ -232,6 +232,14 @@ test("every preset generates a project that passes its own chassis checks and do
         assert.ok(!readme.includes(`](${path}`) && !readme.includes(`\`${path}`), `${preset}: README still points at ${path} (${id})`);
       }
     }
+    // Nothing a project keeps may send its reader to a file only the template has.
+    const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: out, encoding: "utf8" }).split("\0").filter(Boolean);
+    for (const file of tracked) {
+      const text = readFileSync(join(out, file), "utf8");
+      for (const only of ["template-test.yml", "template-release.yml", "template/README.md"]) {
+        assert.ok(!text.includes(only), `${preset}: ${file} mentions ${only}, which the project does not have`);
+      }
+    }
   }
 });
 
@@ -246,6 +254,31 @@ test("--description is written under the README title, in place of the generated
   assert.doesNotMatch(readme, /Written by init|No application code yet/);
 });
 
+test("prose about the template still names the template after init, not the new project", (t) => {
+  // Identity replacement rewrites the template's repository name everywhere, so a sentence such as
+  // "generated from <template>" would come out naming the project itself. Outside a URL, the new
+  // repository's name belongs only in the README title.
+  const out = join(mkdtempSync(join(tmpdir(), "init-")), "project");
+  t.after(() => rmSync(dirname(out), { recursive: true, force: true }));
+  execFileSync("node", ["template/init.mjs", "--name", "zz-name", "--owner", "zz-owner", "--repo", "Zz.Repo", "--preset", "all", "--out", out], { cwd: ROOT, stdio: "pipe" });
+  const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8" }).split("\0").filter((f) => f && existsSync(join(out, f)));
+  const stray = [];
+  for (const file of tracked) {
+    readFileSync(join(out, file), "utf8").split("\n").forEach((line, i) => {
+      const bare = line.replaceAll("github.com/zz-owner/Zz.Repo", "");
+      if (bare.includes("Zz.Repo") && !(file === "README.md" && line === "# Zz.Repo")) stray.push(`${file}:${i + 1}`);
+    });
+  }
+  assert.deepEqual(stray, []);
+});
+
+test("the licence names the year the project is created", () => {
+  const manifest = loadManifest();
+  const identity = { name: "demo-app", owner: "octo", repo: "demo-app" };
+  const license = plan(ROOT, manifest, new Set(), identity, undefined, 2031).files.find((f) => f.file === "LICENSE");
+  assert.match(license.data, /^Copyright \(c\) 2031 octo$/m);
+});
+
 test("init --out writes a project with no template residue", (t) => {
   const out = mkdtempSync(join(tmpdir(), "init-"));
   t.after(() => rmSync(out, { recursive: true, force: true }));
@@ -254,7 +287,8 @@ test("init --out writes a project with no template residue", (t) => {
   for (const gone of ["template", "services", "apps", "architecture", ".devcontainer", ".github/workflows/template-test.yml"]) {
     assert.equal(existsSync(join(out, gone)), false, gone);
   }
-  assert.match(readFileSync(join(out, "LICENSE"), "utf8"), /octo/);
+  // A new project's copyright starts the year it is created, not the year the template was written.
+  assert.match(readFileSync(join(out, "LICENSE"), "utf8"), new RegExp(`^Copyright \\(c\\) ${new Date().getUTCFullYear()} octo$`, "m"));
   const { version } = loadManifest();
   assert.match(
     readFileSync(join(out, "CHANGELOG.md"), "utf8"),

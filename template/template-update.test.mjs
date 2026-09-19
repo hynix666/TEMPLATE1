@@ -2,7 +2,7 @@
 // same tree with a change as the next, and a project generated from the first. Template-only, because
 // generating needs the template, which init deletes from every project.
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -131,6 +131,28 @@ test("it refuses to go back to an older release, and changes nothing", () => {
   assert.throws(() => run(dir, { to: FROM }), /older than/);
   assert.equal(git(dir, "status", "--porcelain"), "");
   assert.equal(git(dir, "rev-parse", "HEAD"), before);
+});
+
+test("a release that does not exist is named as such, and changes nothing", () => {
+  const dir = project("no-such-release");
+  const before = git(dir, "rev-parse", "HEAD");
+  assert.throws(() => run(dir, { to: "v9.9.9" }), (err) => err instanceof UpdateError && /no release v9\.9\.9/.test(err.message));
+  assert.equal(git(dir, "status", "--porcelain"), "");
+  assert.equal(git(dir, "rev-parse", "HEAD"), before);
+});
+
+test("a template it cannot reach exits 2, could not run, never 1, which means conflicts", () => {
+  git(template, "checkout", "-q", FROM);
+  const dir = project("unreachable");
+  git(template, "checkout", "-q", "-");
+  const result = spawnSync(
+    process.execPath,
+    [join(ROOT, "scripts/template-update.mjs"), "--to", TO, "--template", join(work, "no-such-template"), "--owner", "octo-org", "--repo", "demo-app"],
+    { cwd: dir, encoding: "utf8" },
+  );
+  assert.equal(result.status, 2, result.stderr);
+  assert.match(result.stderr, /^template-update: /m);
+  assert.doesNotMatch(result.stderr, /\n\s+at /);
 });
 
 test("it refuses to start without what it needs", () => {

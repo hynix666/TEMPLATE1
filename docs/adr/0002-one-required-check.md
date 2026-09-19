@@ -12,7 +12,7 @@ Separately, a local check that runs different commands from CI drifts from it, u
 
 - `.github/workflows/verify.yml` ends in an aggregate job named `verify` that needs every other job and succeeds only when all of them succeeded. It is the only required status check.
 - `scripts/check-hygiene.mjs` fails the build when a job in `verify.yml` is missing from `verify.needs`, so the rule does not depend on anyone remembering it.
-- `node scripts/verify.mjs` runs the same checks locally. A check that cannot run — a missing toolchain, uninstalled dependencies — fails; only golangci-lint may be skipped locally, and is reported as skipped by name.
+- `node scripts/verify.mjs` runs each module's checks locally, as its CI job does. A check that cannot run — a missing toolchain, uninstalled dependencies — fails; only golangci-lint may be skipped locally, and is reported as skipped by name. The jobs that need a container engine or a CI-only tool — actionlint, zizmor, `npm audit signatures`, and building and starting each image — run only in `verify.yml`.
 - Advisory workflows (`security.yml`, `codeql.yml`) are not required. They report findings and fail only when they could not run at all.
 
 ## Alternatives considered

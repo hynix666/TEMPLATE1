@@ -259,7 +259,7 @@ function assertClean(root) {
 }
 
 /** Builds the complete result in memory. Nothing is written until every file has been processed. */
-export function plan(root, manifest, selected, identity, description = { sentence: describeProject(manifest, selected), generated: true }) {
+export function plan(root, manifest, selected, identity, description = { sentence: describeProject(manifest, selected), generated: true }, year = new Date().getUTCFullYear()) {
   const removed = removedPaths(manifest, selected);
   const known = new Set(Object.keys(manifest.features));
   const result = { deleted: [], files: [] };
@@ -278,6 +278,8 @@ export function plan(root, manifest, selected, identity, description = { sentenc
     let next = replaceIdentity(applyMarkers(text, selected, known, file), manifest.identity, identity);
     if (file === "CHANGELOG.md") next = recordOrigin(next, manifest, selected, file);
     if (file === "README.md") next = recordDescription(next, description.sentence, description.generated, file);
+    // A new project's copyright starts the year it is created, not the year the template was written.
+    if (file === "LICENSE") next = next.replace(/^Copyright \(c\) \d{4} /m, `Copyright (c) ${year} `);
     result.files.push({ file, data: next, changed: next !== text });
   }
   return result;

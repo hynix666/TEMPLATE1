@@ -184,7 +184,7 @@ Dependabot proposes grouped updates weekly for every ecosystem present, SHA-pinn
 
 ## Taking template updates
 
-This project was generated from TEMPLATE1, and `CHANGELOG.md` records the release it came from. When a later release fixes something you want, `scripts/template-update.mjs` brings the change in: it regenerates the project as the old and the new release would have made it, with this project's name and features, and applies the difference as a three-way merge. What you changed yourself is kept, and a conflict is left to resolve like any merge conflict.
+This project was generated from a repository template, and `CHANGELOG.md` records which one and the release it came from. When a later release fixes something you want, `scripts/template-update.mjs` brings the change in: it regenerates the project as the old and the new release would have made it, with this project's name and features, and applies the difference as a three-way merge. What you changed yourself is kept, and a conflict is left to resolve like any merge conflict.
 
 ```bash
 node scripts/template-update.mjs --to vX.Y.Z --dry-run   # what would change

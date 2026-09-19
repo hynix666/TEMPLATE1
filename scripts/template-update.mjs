@@ -66,6 +66,8 @@ export function remoteIdentity(url) {
 }
 
 const git = (cwd, args, options = {}) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], ...options });
+/** The line of an error worth showing: git's own message where there is one, not the command it ran. */
+const firstLine = (err) => String(err?.stderr || err?.message || err).trim().split("\n")[0];
 
 /** Runs a template release's own init, exactly as a new project would have. */
 function generate(templateDir, identity, features, out) {
@@ -119,8 +121,19 @@ export function update({ project, to, dryRun = false, template, owner, repo, log
   try {
     const source = template ?? `${origin.url}.git`;
     log(`template-update: ${origin.version} → ${to} from ${source}, features: ${origin.features.join(", ") || "none"}`);
-    git(work, ["clone", "--quiet", "--no-checkout", source, "template"]);
+    try {
+      git(work, ["clone", "--quiet", "--no-checkout", source, "template"]);
+    } catch (err) {
+      throw new UpdateError(`cannot fetch the template from ${source}: ${firstLine(err)}`);
+    }
     const clone = join(work, "template");
+    for (const version of [origin.version, to]) {
+      try {
+        git(clone, ["rev-parse", "--verify", "--quiet", `refs/tags/${version}^{commit}`]);
+      } catch {
+        throw new UpdateError(`There is no release ${version} in ${source}.`);
+      }
+    }
     const pair = join(work, "pair");
     mkdirSync(pair);
     git(pair, ["init", "-q"]);
@@ -179,8 +192,8 @@ function main() {
     const result = update({ project: process.cwd(), to: values.to, dryRun: values["dry-run"], template: values.template, owner: values.owner, repo: values.repo });
     return result.conflicts?.length ? 1 : 0;
   } catch (err) {
-    if (!(err instanceof UpdateError)) throw err;
-    console.error(`template-update: ${err.message}`);
+    // Exit 1 means "applied with conflicts", so anything that stops the update before that is 2.
+    console.error(`template-update: ${err instanceof UpdateError ? err.message : `could not run: ${firstLine(err)}`}`);
     return 2;
   }
 }
