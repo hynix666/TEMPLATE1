@@ -12,6 +12,8 @@ It has no dependencies beyond Node 24, validates every argument before touching 
 
 **Feature paths.** `features.json` lists, for each feature, the paths it owns. Paths of unselected features are deleted, and so is every `templateOnly` path.
 
+Several features may own the same path, which then belongs to any of them and is deleted only when none is selected — the three task services share `scripts/check-contract.mjs`, `scripts/contract` and its test that way. A path *inside* another feature's path is rejected instead: the two disagree about a file, and it would be kept or deleted by whichever path init processed last rather than by the selection. One module directory still has one owner, and a test holds it to that.
+
 **Marker blocks.** Content inside shared files — workflows, Dependabot, the README, the architecture model — is selected with a pair of marker lines. A marker is the text `ultra:begin` or `ultra:end` followed by a feature id, written inside whatever comment syntax the file uses:
 
 ```text

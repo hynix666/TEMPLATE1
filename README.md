@@ -120,7 +120,10 @@ Each toolchain version is pinned once, in the file named beside it above, so the
 
 ## What's here
 
-- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs every module's checks, `check-hygiene.mjs` guards the repository's shape, `check-docs.mjs` its documentation, `check-contract.mjs` holds every task service to the one API contract in `scripts/contract/`, and `configure-github.mjs` applies the repository settings (squash merging, the required `verify` check, security features).
+- `scripts/` — `setup.mjs` installs every module, `verify.mjs` runs every module's checks, `check-hygiene.mjs` guards the repository's shape, `check-docs.mjs` its documentation, and `configure-github.mjs` applies the repository settings (squash merging, the required `verify` check, security features).
+<!-- ultra:begin go-service|ts-service|py-service -->
+- `scripts/check-contract.mjs` — holds every task service to the one API contract, whose cases are in `scripts/contract/`.
+<!-- ultra:end go-service|ts-service|py-service -->
 <!-- ultra:begin go-service -->
 - `services/api-go/` — Go task API in Clean Architecture layers. `go run ./cmd/api` there serves it on port 8080. [README](services/api-go/README.md)
 <!-- ultra:end go-service -->

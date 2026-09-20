@@ -1,6 +1,6 @@
 {
   "$comment": "Read by template/init.mjs, and deleted with it. A feature's paths are deleted when it is not selected; content inside shared files is selected with marker lines instead. See template/README.md.",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "identity": {
     "owner": "hynix666",
     "repo": "TEMPLATE1",
@@ -11,12 +11,12 @@
     "go-service": {
       "summary": "Go HTTP service: Clean Architecture layers, standard library only, import rules enforced by a test",
       "describes": "a Go task API",
-      "paths": ["services/api-go", ".claude/skills/add-endpoint-go"]
+      "paths": ["services/api-go", ".claude/skills/add-endpoint-go", "scripts/check-contract.mjs", "scripts/contract", "test/check-contract.test.mjs"]
     },
     "ts-service": {
       "summary": "TypeScript HTTP service on Node 24: pure domain core, import boundaries checked on every file",
       "describes": "a TypeScript task API",
-      "paths": ["services/api-ts", ".claude/skills/add-endpoint-ts"]
+      "paths": ["services/api-ts", ".claude/skills/add-endpoint-ts", "scripts/check-contract.mjs", "scripts/contract", "test/check-contract.test.mjs"]
     },
     "mcp-server": {
       "summary": "MCP server on the Model Context Protocol SDK: tools over stdio, the same layers, driven in tests by a real client",
@@ -26,7 +26,7 @@
     "py-service": {
       "summary": "Python HTTP service on the standard library: pure domain, WSGI transport, layer rules enforced by an ast-based check",
       "describes": "a Python task API",
-      "paths": ["services/api-py", ".claude/skills/add-endpoint-py"]
+      "paths": ["services/api-py", ".claude/skills/add-endpoint-py", "scripts/check-contract.mjs", "scripts/contract", "test/check-contract.test.mjs"]
     },
     "web": {
       "summary": "React + Vite app in feature folders, import boundaries checked, component tests",

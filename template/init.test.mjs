@@ -157,11 +157,12 @@ test("the real manifest is consistent and every marker in the tree is well forme
   assert.ok(markers > 0, "expected marker lines in the tree");
 });
 
-test("a path owned by two features, or inside another feature's or the template's, is rejected", () => {
+test("a path may belong to several features, but not to one inside another's or the template's", () => {
   const manifest = (features, templateOnly = []) => ({ version: "1.0.0", features, templateOnly, presets: {} });
   const exists = () => true;
-  assert.match(validateManifest(manifest({ a: { paths: ["svc"] }, b: { paths: ["svc"] } }), exists).join("\n"), /"svc" is owned by both "a" and "b"/);
-  assert.match(validateManifest(manifest({ a: { paths: ["svc"] }, b: { paths: ["svc/x.md"] } }), exists).join("\n"), /"svc\/x\.md" is owned by both "b" and "a"/);
+  // The same path under two features is how a file both of them need is expressed.
+  assert.deepEqual(validateManifest(manifest({ a: { paths: ["svc"] }, b: { paths: ["svc"] } }), exists), []);
+  assert.match(validateManifest(manifest({ a: { paths: ["svc"] }, b: { paths: ["svc/x.md"] } }), exists).join("\n"), /"svc\/x\.md" is inside "svc", which "a" owns/);
   assert.match(validateManifest(manifest({ a: { paths: ["template/x"] } }, ["template"]), exists).join("\n"), /"template\/x" is owned by "a" and is template-only/);
   assert.deepEqual(validateManifest(manifest({ a: { paths: ["svc"] }, b: { paths: ["svc2"] } }), exists), []);
 });
@@ -198,6 +199,9 @@ test("removed paths cover unselected features and template-only files", () => {
   const removed = removedPaths(loadManifest(), new Set(["web"]));
   assert.ok(removed.includes("template") && removed.includes("services/api-go"));
   assert.ok(!removed.includes("apps/web"));
+  // A path several features own goes only when none of its owners is selected.
+  assert.ok(removed.includes("scripts/contract"), "no task service selected");
+  assert.ok(!removedPaths(loadManifest(), new Set(["py-service"])).includes("scripts/contract"), "one owner selected");
 });
 
 test("in-place init removes an unselected module whole, ignored files included", (t) => {
@@ -249,10 +253,12 @@ test("every preset generates a project that passes its own chassis checks and do
     const readme = readFileSync(join(out, "README.md"), "utf8");
     assert.ok(!readme.includes(DESCRIPTION_ANCHOR), `${preset}: README keeps the description anchor`);
     assert.ok(readme.includes(`\n${describeProject(manifest, new Set(selected))}\n`), `${preset}: README has no description`);
-    for (const [id, feature] of Object.entries(manifest.features).filter(([id]) => !selected.includes(id))) {
-      for (const path of feature.paths) {
-        assert.ok(!readme.includes(`](${path}`) && !readme.includes(`\`${path}`), `${preset}: README still points at ${path} (${id})`);
-      }
+    // What this project does not have. A path several features own goes only when none of its owners
+    // is selected, so an unselected feature's path may still be here because another one keeps it.
+    const absent = [...new Set(Object.values(manifest.features).flatMap((feature) => feature.paths))]
+      .filter((path) => !Object.entries(manifest.features).some(([id, f]) => selected.includes(id) && f.paths.includes(path)));
+    for (const path of absent) {
+      assert.ok(!readme.includes(`](${path}`) && !readme.includes(`\`${path}`), `${preset}: README still points at ${path}`);
     }
     const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: out, encoding: "utf8" }).split("\0").filter(Boolean);
     // A guide that names a module this project does not have sends its reader — or an agent following
@@ -262,13 +268,11 @@ test("every preset generates a project that passes its own chassis checks and do
     const guides = ["AGENTS.md", "README.md", "CONTRIBUTING.md", "docs/README.md", ...tracked.filter((f) => f.startsWith(".claude/skills/"))];
     for (const file of guides.filter((f) => existsSync(join(out, f)))) {
       const text = readFileSync(join(out, file), "utf8");
-      for (const [id, feature] of Object.entries(manifest.features).filter(([id]) => !selected.includes(id))) {
-        for (const path of feature.paths) {
-          if (/[/.]/.test(path)) assert.ok(!text.includes(path), `${preset}: ${file} names ${path} (${id}), which this project does not have`);
-          const leaf = path.split("/").at(-1);
-          if (!/^(services|\.claude\/skills)\//.test(path)) continue;
-          assert.ok(!text.includes(leaf), `${preset}: ${file} names ${leaf} (${id}), which this project does not have`);
-        }
+      for (const path of absent) {
+        if (/[/.]/.test(path)) assert.ok(!text.includes(path), `${preset}: ${file} names ${path}, which this project does not have`);
+        const leaf = path.split("/").at(-1);
+        if (!/^(services|\.claude\/skills)\//.test(path)) continue;
+        assert.ok(!text.includes(leaf), `${preset}: ${file} names ${leaf}, which this project does not have`);
       }
     }
     // Nothing a project keeps may send its reader to a file only the template has.

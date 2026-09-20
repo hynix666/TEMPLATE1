@@ -14,7 +14,9 @@
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+// ultra:begin go-service|ts-service|py-service
 import { TASK_SERVICES } from "./check-contract.mjs";
+// ultra:end go-service|ts-service|py-service
 import { available, MODULES, presentModules, ROOT, run } from "./modules.mjs";
 
 const results = [];
@@ -96,8 +98,10 @@ for (const module of present) {
   if (module.toolchain === "go") goModule(module);
   else if (module.toolchain === "python") pythonModule(module);
   else nodeModule(module);
+  // ultra:begin go-service|ts-service|py-service
   // Each task service is also held to the one contract all of them share (ADR-0008).
   if (TASK_SERVICES.includes(module.id)) step(`${module.id}: contract`, "node", ["scripts/check-contract.mjs", module.id]);
+  // ultra:end go-service|ts-service|py-service
 }
 
 const icon = { pass: "✔", fail: "✘", skipped: "–" };
