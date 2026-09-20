@@ -364,6 +364,8 @@ const USAGE = `Usage:
   node template/init.mjs [--name <project>] [--owner <github-owner>] (--preset <preset> | --features <a,b>)
                          [--repo <repository>] [--description <sentence>] [--out <directory>] [--dry-run]
   --owner and --repo default to the origin remote, and --name to the repository name.
+  --owner/--repo are the GitHub repository: every link, every badge, and the README title.
+  --name is the project: package names, with the npm scope from --owner, lowercased.
   --description is written under the README's title; without it, a sentence is built from the features.`;
 
 export async function main(argv = process.argv.slice(2), root = ROOT) {

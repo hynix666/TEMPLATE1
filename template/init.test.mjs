@@ -232,8 +232,24 @@ test("every preset generates a project that passes its own chassis checks and do
         assert.ok(!readme.includes(`](${path}`) && !readme.includes(`\`${path}`), `${preset}: README still points at ${path} (${id})`);
       }
     }
-    // Nothing a project keeps may send its reader to a file only the template has.
     const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: out, encoding: "utf8" }).split("\0").filter(Boolean);
+    // A guide that names a module this project does not have sends its reader — or an agent following
+    // it step by step — to a directory that is not there. A path is looked for only where it cannot be
+    // mistaken for prose: `architecture` is a word, `apps/web` is not, and the last segment counts only
+    // under services/ and .claude/skills/. ADRs are not guides: a decision record names what it decided.
+    const guides = ["AGENTS.md", "README.md", "CONTRIBUTING.md", "docs/README.md", ...tracked.filter((f) => f.startsWith(".claude/skills/"))];
+    for (const file of guides.filter((f) => existsSync(join(out, f)))) {
+      const text = readFileSync(join(out, file), "utf8");
+      for (const [id, feature] of Object.entries(manifest.features).filter(([id]) => !selected.includes(id))) {
+        for (const path of feature.paths) {
+          if (/[/.]/.test(path)) assert.ok(!text.includes(path), `${preset}: ${file} names ${path} (${id}), which this project does not have`);
+          const leaf = path.split("/").at(-1);
+          if (!/^(services|\.claude\/skills)\//.test(path)) continue;
+          assert.ok(!text.includes(leaf), `${preset}: ${file} names ${leaf} (${id}), which this project does not have`);
+        }
+      }
+    }
+    // Nothing a project keeps may send its reader to a file only the template has.
     for (const file of tracked) {
       const text = readFileSync(join(out, file), "utf8");
       for (const only of ["template-test.yml", "template-release.yml", "template/README.md"]) {
@@ -270,6 +286,11 @@ test("prose about the template still names the template after init, not the new 
     });
   }
   assert.deepEqual(stray, []);
+  // Where each identity value lands, as the public contract states it: the repository titles the
+  // README and carries the links, the name is the package and its scope.
+  assert.match(readFileSync(join(out, "README.md"), "utf8"), /^# Zz.Repo$/m);
+  assert.equal(JSON.parse(readFileSync(join(out, "package.json"), "utf8")).name, "zz-name");
+  assert.equal(JSON.parse(readFileSync(join(out, "packages/ts-library/package.json"), "utf8")).name, "@zz-owner/zz-name");
 });
 
 test("the licence names the year the project is created", () => {
