@@ -77,7 +77,7 @@ A behaviour change a project's users would notice — an API status code, a stri
 
 ## Releasing the template
 
-"Use this template" copies `main` as it is, not the latest release, and init writes `version` from `features.json` into every new project as the release it came from. So **`main` always equals a published release**: a pull request that bumps `version` is released the moment it merges, by `.github/workflows/template-release.yml`, which tags that commit and writes notes with `release-notes.mjs` — what changes in generated projects, grouped by the feature that owns each file, then how to take it with `template-update.mjs`, then the merged pull requests. Nothing needs running by hand; `gh release view v<version>` shows the result.
+"Use this template" copies `main` as it is, not the latest release, and init writes `version` from `features.json` into every new project as the release it came from. So **`main` always equals a published release**: a pull request that bumps `version` is released the moment it merges, by `.github/workflows/template-release.yml`, which tags that commit and writes notes with `release-notes.mjs` — what changes in a project made from each preset, generated at both releases with each release's own init and compared, then how to take it with `template-update.mjs`, then the merged pull requests. Diffing generated projects rather than the template is what makes the list true: a change inside a marker block reaches only the presets that keep it, and a file whose ownership moves is deleted from the presets that lose it without its contents changing at all. Nothing needs running by hand; `gh release view v<version>` shows the result.
 
 Before merging a release pull request:
 
