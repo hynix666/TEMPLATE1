@@ -37,8 +37,11 @@ export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 /** Reserved marker id: its blocks are deleted on every init, like the `templateOnly` paths. */
 export const TEMPLATE_ONLY_ID = "template";
 
-/** A marker is one directive on its own line; the comment syntax around it belongs to the file type. */
-export const MARKER_RE = /ultra:(begin|end)\s+([a-z0-9-]+)/;
+/**
+ * A marker is one directive on its own line; the comment syntax around it belongs to the file type.
+ * Its id is one feature, or several joined by `|` for a block that belongs to any of them.
+ */
+export const MARKER_RE = /ultra:(begin|end)\s+([a-z0-9-]+(?:\|[a-z0-9-]+)*)/;
 
 const NAME_RE = /^[a-z][a-z0-9-]{0,62}[a-z0-9]$/;
 const OWNER_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/;
@@ -128,9 +131,10 @@ export function removedPaths(manifest, selected) {
 export const isUnder = (file, path) => file === path || file.startsWith(`${path}/`);
 
 /**
- * Keeps the blocks of selected features and deletes the rest, marker lines included. Throws on an
- * unknown id, a nested begin, an end without its begin, or a block never closed — a malformed
- * marker would otherwise delete the rest of the file silently.
+ * Keeps the blocks of selected features and deletes the rest, marker lines included. A block whose id
+ * joins several features with `|` is kept when any one of them is selected, and its end must name the
+ * same ids in the same order. Throws on an unknown id, a nested begin, an end without its begin, or a
+ * block never closed — a malformed marker would otherwise delete the rest of the file silently.
  */
 export function applyMarkers(text, selected, known, file = "<text>") {
   const lines = text.split("\n");
@@ -149,14 +153,20 @@ export function applyMarkers(text, selected, known, file = "<text>") {
     }
     const [, kind, id] = match;
     const where = `${file}:${i + 1}`;
-    if (id !== TEMPLATE_ONLY_ID && !known.has(id)) {
-      throw new InitError(`${where}: marker names unknown feature "${id}".`);
+    const ids = id.split("|");
+    for (const one of ids) {
+      if (one !== TEMPLATE_ONLY_ID && !known.has(one)) throw new InitError(`${where}: marker names unknown feature "${one}".`);
+    }
+    // Joining the reserved id to a feature reads as "kept when that feature is selected" and would
+    // quietly mean the opposite, since a template block always goes.
+    if (ids.length > 1 && ids.includes(TEMPLATE_ONLY_ID)) {
+      throw new InitError(`${where}: the reserved id "${TEMPLATE_ONLY_ID}" cannot be joined to a feature.`);
     }
     if (kind === "begin") {
       if (open !== null) {
         throw new InitError(`${where}: "${id}" block opens inside the "${open.id}" block from line ${open.line}; blocks do not nest.`);
       }
-      open = { id, line: i + 1, keep: id !== TEMPLATE_ONLY_ID && selected.has(id) };
+      open = { id, line: i + 1, keep: !ids.includes(TEMPLATE_ONLY_ID) && ids.some((one) => selected.has(one)) };
     } else {
       if (open === null || open.id !== id) {
         throw new InitError(`${where}: end of "${id}" block that was never opened.`);

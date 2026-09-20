@@ -45,6 +45,28 @@ test("template blocks are always removed", () => {
   assert.equal(applyMarkers(["a", begin("template"), "only here", end("template")].join("\n"), new Set(["web"]), known), "a");
 });
 
+test("a block joined to several features is kept when any one of them is selected", () => {
+  const any = "go-service|web";
+  const text = ["a", begin(any), "shared", end(any), "z"].join("\n");
+  assert.equal(applyMarkers(text, new Set(["web"]), known), "a\nshared\nz");
+  assert.equal(applyMarkers(text, new Set(["go-service"]), known), "a\nshared\nz");
+  assert.equal(applyMarkers(text, new Set(["go-service", "web"]), known), "a\nshared\nz");
+  assert.equal(applyMarkers(text, new Set(), known), "a\nz");
+});
+
+test("a joined block is malformed on an unknown id, a different end, or the reserved id", () => {
+  const cases = {
+    unknown: [begin("web|nope"), end("web|nope")],
+    // The end names the same ids in the same order, so a half-edited pair is an error, not a guess.
+    reordered: [begin("web|go-service"), end("go-service|web")],
+    partial: [begin("web|go-service"), end("web")],
+    reserved: [begin("web|template"), end("web|template")],
+  };
+  for (const [name, lines] of Object.entries(cases)) {
+    assert.throws(() => applyMarkers(lines.join("\n"), new Set(["web"]), known, name), InitError, name);
+  }
+});
+
 test("malformed markers throw instead of deleting the rest of the file", () => {
   const cases = {
     unknown: [begin("nope"), end("nope")],
