@@ -1,60 +1,71 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { loadManifest } from "./init.mjs";
-import { classify, render, withoutTemplateBlocks } from "./release-notes.mjs";
+import { diffTrees, groupByPreset, render, walk } from "./release-notes.mjs";
 
-const manifest = loadManifest();
+/** A generated project, as a directory of files. */
+function tree(t, files) {
+  const dir = mkdtempSync(join(tmpdir(), "notes-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  for (const [path, content] of Object.entries(files)) {
+    mkdirSync(dirname(join(dir, path)), { recursive: true });
+    writeFileSync(join(dir, path), content);
+  }
+  return dir;
+}
 
-test("files are grouped by the feature that owns them, and template-only files are kept apart", () => {
-  const { shipped, templateOnly } = classify(
-    [
-      ["M", "README.md"],
-      ["A", "services/api-py/src/api_py/new.py"],
-      ["M", "services/api-go/go.mod"],
-      ["M", "template/init.mjs"],
-      ["M", ".github/workflows/template-test.yml"],
-    ],
-    manifest,
-  );
-  // Every project first, then the order features.json lists features in, not the order files came in.
-  assert.deepEqual([...shipped.keys()], ["Every project", "go-service", "py-service"]);
-  assert.deepEqual(shipped.get("py-service"), ["A services/api-py/src/api_py/new.py"]);
-  assert.deepEqual(templateOnly, ["M template/init.mjs", "M .github/workflows/template-test.yml"]);
+test("comparing two generated projects reports what was added, deleted and changed", (t) => {
+  const before = tree(t, {
+    "README.md": "# demo\n",
+    "scripts/check-contract.mjs": "contract\n",
+    "scripts/verify.mjs": "old\n",
+    "CHANGELOG.md": "- Initialized from v1.0.0\n",
+  });
+  const after = tree(t, {
+    "README.md": "# demo\n",
+    "scripts/verify.mjs": "new\n",
+    "docs/adr/0010-new.md": "decided\n",
+    "CHANGELOG.md": "- Initialized from v2.0.0\n",
+  });
+
+  assert.deepEqual(diffTrees(before, after), [
+    ["A", "docs/adr/0010-new.md"],
+    ["D", "scripts/check-contract.mjs"],
+    ["M", "scripts/verify.mjs"],
+  ]);
+  // The origin line differs in every release by definition, and the update rewrites it itself.
+  assert.deepEqual(diffTrees(before, before), []);
+  assert.deepEqual(walk(after).sort(), ["CHANGELOG.md", "README.md", "docs/adr/0010-new.md", "scripts/verify.mjs"]);
 });
 
-test("the notes say what reaches projects, how to take it, and what does not", () => {
-  const notes = render({ to: "v9.9.9", from: "v9.9.8", ...classify([["M", "SECURITY.md"], ["M", "template/README.md"]], manifest) });
-  assert.match(notes, /## What changes in generated projects\n\n### Every project\n\n- `M SECURITY\.md`/);
+test("presets that receive the same files share a section, and one that receives nothing is dropped", () => {
+  const contract = [["D", "scripts/check-contract.mjs"], ["M", "scripts/verify.mjs"]];
+  const readme = [["M", "README.md"]];
+  const groups = groupByPreset([["minimal", contract], ["go-api", readme], ["library", contract], ["mcp", []]]);
+
+  assert.deepEqual(groups.map((g) => g.title), ["minimal, library", "go-api"]);
+  assert.deepEqual(groups[0].files, ["D scripts/check-contract.mjs", "M scripts/verify.mjs"]);
+});
+
+test("a release that reaches every preset the same way says so once", () => {
+  const same = [["M", "SECURITY.md"]];
+  const groups = groupByPreset([["minimal", same], ["go-api", same], ["all", same]]);
+  assert.deepEqual(groups.map((g) => g.title), ["Every preset"]);
+});
+
+test("the notes say what reaches projects, how to take it, and what reaches none", () => {
+  const groups = groupByPreset([["minimal", [["M", "SECURITY.md"]]]]);
+  const notes = render({ to: "v9.9.9", from: "v9.9.8", groups, templateOnly: ["M template/README.md"] });
+
+  assert.match(notes, /## What changes in generated projects\n\n[^\n]+\n\n### Every preset\n\n- `M SECURITY\.md`/);
   assert.match(notes, /template-update\.mjs --to v9\.9\.9 --dry-run/);
-  assert.match(notes, /## Template only[\s\S]*`M template\/README\.md`/);
+  assert.match(notes, /## Reaches no project[\s\S]*`M template\/README\.md`/);
 });
 
-test("a shared file changed only inside its template block is template-only; any other change ships", () => {
-  const readme = (intro, layout) => [
-    "# Project",
-    "<!-- ultra:begin template -->",
-    intro,
-    "<!-- ultra:end template -->",
-    "<!-- ultra:begin go-service -->",
-    layout,
-    "<!-- ultra:end go-service -->",
-  ].join("\n");
-  const before = readme("Presets, then features.", "- services/api-go/");
-  assert.equal(withoutTemplateBlocks(before), withoutTemplateBlocks(readme("Features, then presets.", "- services/api-go/")));
-  assert.notEqual(withoutTemplateBlocks(before), withoutTemplateBlocks(readme("Presets, then features.", "- services/api-go/ (Go)")));
-  // Feature markers stay: moving content from one feature's block to another's changes what projects get.
-  assert.match(withoutTemplateBlocks(before), /ultra:begin go-service/);
-
-  const { shipped, templateOnly, templateBlocks } = classify([["M", "README.md"], ["M", "SECURITY.md"]], manifest, (path) => path === "README.md");
-  assert.deepEqual(templateBlocks, ["M README.md"]);
-  assert.deepEqual(templateOnly, []);
-  assert.deepEqual(shipped.get("Every project"), ["M SECURITY.md"]);
-  const notes = render({ to: "v9.9.9", from: "v9.9.8", shipped, templateOnly, templateBlocks });
-  assert.match(notes, /## Template only[\s\S]*- `M README\.md`: only its `template` block, which init deletes/);
-  assert.doesNotMatch(notes, /### Every project\n\n- `M README\.md`/);
-});
-
-test("a release that changes nothing projects have says so", () => {
-  const notes = render({ to: "v9.9.9", from: "v9.9.8", ...classify([["M", "template/README.md"]], manifest) });
-  assert.match(notes, /Nothing: every change in this release is template-only\./);
+test("a release that changes nothing any project has says so, and a new preset is named", () => {
+  const notes = render({ to: "v9.9.9", from: "v9.9.8", groups: [], templateOnly: ["M template/init.mjs"], addedPresets: ["rust-api"] });
+  assert.match(notes, /Nothing: no file changes in a project made from any preset\./);
+  assert.match(notes, /New in this release: the preset\(s\) rust-api\./);
 });

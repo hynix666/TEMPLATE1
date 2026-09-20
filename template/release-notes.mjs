@@ -2,70 +2,81 @@
  * Release notes for a template release, written for the people who will take it into a project.
  *
  * GitHub's generated notes list pull request titles, which say what changed in this repository. An
- * adopter needs something else: which files change in a project generated from the template, grouped
- * by the feature that owns them, so they can tell at a glance whether a release touches anything they
- * selected. Template-only files are listed apart, because no project ever has them, and so is a shared
- * file whose change lies entirely inside its `template` blocks, because init deletes those.
+ * adopter needs something else: which files change in a project made from the template. So this
+ * generates a project from every preset at both releases, with that release's own init, and compares
+ * the two — what template-update.mjs does to build its patch. The notes then list what an update
+ * actually applies, which a diff of the template tree cannot tell: a change inside a marker block
+ * reaches only the presets that keep that block, and a file whose ownership moved is deleted from the
+ * presets that no longer own it while its contents never changed at all.
  *
  *   node template/release-notes.mjs --to v1.4.1                 # since the previous release tag
  *   node template/release-notes.mjs --to v1.4.1 --from v1.3.0
  *
  * Template-only: init deletes it, with the rest of template/.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, sep } from "node:path";
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
-import { isUnder, loadManifest, MARKER_RE, ROOT, TEMPLATE_ONLY_ID } from "./init.mjs";
+import { ROOT } from "./init.mjs";
 
-const CHASSIS = "Every project";
+// The same at both releases, so the identity cancels out of the comparison.
+const IDENTITY = ["--name", "demo-app", "--owner", "octo-org"];
 
-/** A shared file as far as projects are concerned: init deletes its `template` blocks, markers included. */
-export function withoutTemplateBlocks(text) {
-  const kept = [];
-  let inside = false;
-  for (const line of text.split("\n")) {
-    const marker = MARKER_RE.exec(line);
-    if (marker?.[2] === TEMPLATE_ONLY_ID) inside = marker[1] === "begin";
-    else if (!inside) kept.push(line);
-  }
-  return kept.join("\n");
+/** Every file under a directory, as paths relative to it, with forward slashes. */
+export function walk(dir, base = "") {
+  return readdirSync(join(dir, base), { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory() ? walk(dir, join(base, entry.name)) : [join(base, entry.name).split(sep).join("/")]);
 }
 
 /**
- * Sorts `git diff --name-status` entries into template-only files and, per owning feature, the rest.
- * `changedOnlyInTemplateBlocks(path)` says whether a modified shared file differs only inside its
- * `template` blocks; such a file is listed as template-only too, because no project receives the change.
+ * What changed between two generated projects. CHANGELOG.md is left out for the reason
+ * template-update leaves it out: init writes the release a project came from into that file, so it
+ * differs in every release by definition, and the update rewrites the line itself.
  */
-export function classify(entries, manifest, changedOnlyInTemplateBlocks = () => false) {
-  // Every project first, then features in the order features.json lists them; empty groups are dropped.
-  const shipped = new Map([CHASSIS, ...Object.keys(manifest.features)].map((owner) => [owner, []]));
-  const templateOnly = [];
-  const templateBlocks = [];
-  for (const [status, path] of entries) {
-    if (manifest.templateOnly.some((only) => isUnder(path, only))) {
-      templateOnly.push(`${status} ${path}`);
-      continue;
-    }
-    if (status === "M" && changedOnlyInTemplateBlocks(path)) {
-      templateBlocks.push(`${status} ${path}`);
-      continue;
-    }
-    const owner = Object.entries(manifest.features).find(([, feature]) => feature.paths.some((p) => isUnder(path, p)))?.[0] ?? CHASSIS;
-    shipped.get(owner).push(`${status} ${path}`);
-  }
-  for (const [owner, files] of shipped) if (files.length === 0) shipped.delete(owner);
-  return { shipped, templateOnly, templateBlocks };
+export function diffTrees(before, after) {
+  const [a, b] = [new Set(walk(before)), new Set(walk(after))];
+  return [...new Set([...a, ...b])].sort()
+    .filter((path) => path !== "CHANGELOG.md")
+    .flatMap((path) => {
+      if (!a.has(path)) return [["A", path]];
+      if (!b.has(path)) return [["D", path]];
+      return readFileSync(join(before, path)).equals(readFileSync(join(after, path))) ? [] : [["M", path]];
+    });
 }
 
-export function render({ to, from, shipped, templateOnly, templateBlocks = [], pullRequests = "" }) {
-  const lines = [`Changes since ${from}.`, "", "## What changes in generated projects", ""];
-  if (shipped.size === 0) lines.push("Nothing: every change in this release is template-only.", "");
-  for (const [owner, files] of shipped) {
-    lines.push(`### ${owner === CHASSIS ? owner : `With \`${owner}\``}`, "", ...files.map((f) => `- \`${f}\``), "");
+/**
+ * One section per set of presets that receive the same files, in the order the presets were given.
+ * A preset that receives nothing is dropped, and presets whose lists are identical share a section —
+ * the usual case, since most releases change the same files for everyone.
+ */
+export function groupByPreset(perPreset) {
+  const groups = new Map();
+  for (const [preset, entries] of perPreset) {
+    const files = entries.map(([status, path]) => `${status} ${path}`);
+    if (files.length === 0) continue;
+    const key = files.join("\n");
+    if (!groups.has(key)) groups.set(key, { presets: [], files });
+    groups.get(key).presets.push(preset);
   }
+  return [...groups.values()].map((group) => ({
+    ...group,
+    title: group.presets.length === perPreset.length ? "Every preset" : group.presets.join(", "),
+  }));
+}
+
+export function render({ to, from, groups, templateOnly = [], addedPresets = [], pullRequests = "" }) {
+  const lines = [`Changes since ${from}.`, "", "## What changes in generated projects", ""];
+  lines.push(groups.length === 0
+    ? "Nothing: no file changes in a project made from any preset."
+    : "Every preset was generated at both releases, with that release's own init, and compared. This is what an update applies.", "");
+  for (const { title, files } of groups) {
+    lines.push(`### ${title}`, "", ...files.map((f) => `- \`${f}\``), "");
+  }
+  if (addedPresets.length > 0) lines.push(`New in this release: the preset(s) ${addedPresets.join(", ")}.`, "");
   lines.push(
-    "Shared files such as `README.md` and the workflows carry marker blocks, so a change listed under *Every project* may only reach projects that selected the feature it belongs to.",
-    "",
     "## Taking it into a project",
     "",
     "```bash",
@@ -76,14 +87,13 @@ export function render({ to, from, shipped, templateOnly, templateBlocks = [], p
     "A project generated before v1.4.0 runs the script once from a clone of the template, with the project as its working directory.",
     "",
   );
-  if (templateOnly.length + templateBlocks.length > 0) {
+  if (templateOnly.length > 0) {
     lines.push(
-      "## Template only",
+      "## Reaches no project",
       "",
-      "No generated project has these files, or these parts of them.",
+      "These changed in the template and appear in no generated project: template-only files, and shared files whose change lies inside a `template` block.",
       "",
       ...templateOnly.map((f) => `- \`${f}\``),
-      ...templateBlocks.map((f) => `- \`${f}\`: only its \`template\` block, which init deletes`),
       "",
     );
   }
@@ -93,20 +103,63 @@ export function render({ to, from, shipped, templateOnly, templateBlocks = [], p
 
 const git = (...args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
 
+/** A project as one release's own init would have made it. */
+function generate(templateDir, preset, out) {
+  const result = spawnSync(process.execPath, ["template/init.mjs", ...IDENTITY, "--preset", preset, "--out", out], { cwd: templateDir, encoding: "utf8" });
+  if (result.status !== 0) {
+    throw new Error(`init at ${templateDir} failed for preset ${preset}: ${(result.stderr || result.stdout).trim().split("\n").at(-1)}`);
+  }
+  return out;
+}
+
 function main() {
   const { values } = parseArgs({ options: { to: { type: "string" }, from: { type: "string" }, repo: { type: "string" } } });
   if (!/^v\d+\.\d+\.\d+$/.test(values.to ?? "")) throw new Error(`--to must be a version tag such as v1.4.1, got "${values.to ?? ""}"`);
   const from = values.from ?? git("describe", "--tags", "--abbrev=0", "--match", "v*", "HEAD");
   const entries = git("diff", "--no-renames", "--name-status", from, "HEAD").split("\n").filter(Boolean).map((l) => [l.slice(0, l.indexOf("\t")), l.slice(l.indexOf("\t") + 1)]);
-  let pullRequests = "";
-  if (values.repo) {
-    // GitHub's own list of merged pull requests, appended so the notes carry both views.
-    // The tag does not exist yet when this runs, so the API needs the commit it will point at.
-    const fields = [`tag_name=${values.to}`, `target_commitish=${git("rev-parse", "HEAD")}`, `previous_tag_name=${from}`];
-    pullRequests = execFileSync("gh", ["api", `repos/${values.repo}/releases/generate-notes`, ...fields.flatMap((f) => ["-f", f]), "--jq", ".body"], { encoding: "utf8" });
+
+  const work = mkdtempSync(join(tmpdir(), "release-notes-"));
+  const worktrees = [];
+  try {
+    // HEAD gets a worktree of its own rather than being read from this checkout: init --out reads the
+    // tracked files as they are on disk, so an uncommitted change here would reach the notes.
+    const [before, after] = ["before", "after"].map((label, i) => {
+      const dir = join(work, label);
+      git("worktree", "add", "--quiet", "--detach", dir, [from, "HEAD"][i]);
+      worktrees.push(dir);
+      return dir;
+    });
+    const presets = (dir) => Object.keys(JSON.parse(readFileSync(join(dir, "template/features.json"), "utf8")).presets);
+    const known = new Set(presets(before));
+    const addedPresets = presets(after).filter((preset) => !known.has(preset));
+    const perPreset = presets(after).filter((preset) => known.has(preset)).map((preset) => [
+      preset,
+      diffTrees(generate(before, preset, join(work, `before-${preset}`)), generate(after, preset, join(work, `after-${preset}`))),
+    ]);
+
+    // What changed in the template but reaches no project: both the template-only paths and a shared
+    // file whose change lies entirely inside its `template` blocks, without having to tell them apart.
+    const reaching = new Set(perPreset.flatMap(([, diff]) => diff.map(([, path]) => path)));
+    const templateOnly = entries.filter(([, path]) => !reaching.has(path)).map(([status, path]) => `${status} ${path}`);
+
+    let pullRequests = "";
+    if (values.repo) {
+      // GitHub's own list of merged pull requests, appended so the notes carry both views.
+      // The tag does not exist yet when this runs, so the API needs the commit it will point at.
+      const fields = [`tag_name=${values.to}`, `target_commitish=${git("rev-parse", "HEAD")}`, `previous_tag_name=${from}`];
+      pullRequests = execFileSync("gh", ["api", `repos/${values.repo}/releases/generate-notes`, ...fields.flatMap((f) => ["-f", f]), "--jq", ".body"], { encoding: "utf8" });
+    }
+    process.stdout.write(render({ to: values.to, from, groups: groupByPreset(perPreset), templateOnly, addedPresets, pullRequests }));
+  } finally {
+    for (const dir of worktrees) {
+      try {
+        git("worktree", "remove", "--force", dir);
+      } catch {
+        // Already gone, or never added; the directory goes with the rest below either way.
+      }
+    }
+    rmSync(work, { recursive: true, force: true });
   }
-  const onlyTemplateBlocks = (path) => withoutTemplateBlocks(git("show", `${from}:${path}`)) === withoutTemplateBlocks(git("show", `HEAD:${path}`));
-  process.stdout.write(render({ to: values.to, from, ...classify(entries, loadManifest(), onlyTemplateBlocks), pullRequests }));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
