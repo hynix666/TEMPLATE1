@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { checkGate, checkRepoHygiene, checkWorkflow, MAX_TRACKED_BYTES, REQUIRED_IGNORES } from "../scripts/check-hygiene.mjs";
+import { checkGate, checkModules, checkRepoHygiene, checkWorkflow, MAX_TRACKED_BYTES, REQUIRED_IGNORES } from "../scripts/check-hygiene.mjs";
 
 const IGNORE = [...REQUIRED_IGNORES, "!.env.example", "build/", "*.tsbuildinfo", ".DS_Store", ".idea/", "*.local"].join("\n");
 const SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1";
@@ -158,6 +158,28 @@ test("an absolute path into a home directory fails; container paths, placeholder
   }));
   assert.match(found, /home directory in docs\/forward\.md:1, docs\/mac\.md:1, docs\/windows\.md:1\./);
   assert.doesNotMatch(found, /fine\.md|devcontainer\.json|compose\.yml/);
+});
+
+test("a module present without its lockfile or its verify script fails; a complete one passes", () => {
+  const manifest = (scripts) => JSON.stringify({ scripts });
+  const read = (path) => ({
+    "services/api-ts/package.json": manifest({ verify: "npm test" }),
+    "apps/web/package.json": manifest({ test: "vitest run" }),
+  })[path];
+
+  const complete = ["services/api-ts/package.json", "services/api-ts/package-lock.json", "services/api-ts/src/main.ts"];
+  assert.deepEqual(checkModules(complete, read), []);
+  assert.match(checkModules(complete.filter((p) => !p.endsWith("lock.json")), read).join(), /api-ts` is present but does not track `package-lock\.json`/);
+  assert.match(
+    checkModules(["apps/web/package.json", "apps/web/package-lock.json"], read).join(),
+    /apps\/web\/package\.json` has no `verify` script/,
+  );
+  assert.match(
+    checkModules(["services/api-py/pyproject.toml", "services/api-py/src/main.py"], read).join(),
+    /api-py` is present but does not track `uv\.lock`/,
+  );
+  // A module that is not there is not a missing lockfile.
+  assert.deepEqual(checkModules(["README.md"], read), []);
 });
 
 test("a repository with nothing tracked is fatal, not vacuously clean", (t) => {

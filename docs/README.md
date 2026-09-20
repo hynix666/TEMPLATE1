@@ -11,7 +11,7 @@ What is written down about this repository, and how to keep it true.
 | Each module's `README.md` | What that module is and how to run it. Documentation about code lives next to the code |
 
 <!-- ultra:begin template -->
-| [template/README.md](../template/README.md) | How the template's feature selection, marker blocks and identity replacement work |
+[template/README.md](../template/README.md) covers the template itself: how its feature selection, marker blocks and identity replacement work.
 <!-- ultra:end template -->
 
 ## Rules for changing documentation

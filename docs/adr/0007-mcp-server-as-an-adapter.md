@@ -29,7 +29,7 @@ There is also a protocol-shaped trap. An MCP tool has two distinct ways to fail:
 
 ## Consequences
 
-- A project that selects this feature gets a working MCP server whose tools are exercised by CI, and a skill describing how to add another.
+- The server's tools are exercised by CI, and the skill beside the module describes how to add another.
 - The status rules now exist in three modules. Keeping them identical is a stated invariant in `AGENTS.md`, and a divergence is visible because all three are tested against the same cases.
 - The server depends on the task API being reachable. A misconfiguration fails at startup rather than on every tool call, because a server that answers every call with a connection error keeps a model trying.
 - Resources, prompts, sampling and HTTP transports are not implemented. Each is another registration in the same adapter.

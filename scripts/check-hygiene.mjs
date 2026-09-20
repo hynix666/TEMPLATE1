@@ -25,6 +25,8 @@
  *  11. No tracked source or config file contains an invisible or text-reordering character. A human
  *      reviewer sees nothing where an agent reads a hidden instruction, or code runs other than shown.
  *  12. No tracked source or config file holds an absolute path into someone's home directory.
+ *  13. Every module present tracks the manifest and lockfile its toolchain installs from, and a
+ *      Node module's manifest has the `verify` script both verify.mjs and its CI job run.
  *
  *   node scripts/check-hygiene.mjs
  *
@@ -34,6 +36,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { MODULES } from "./modules.mjs";
 
 export const REQUIRED_IGNORES = ["node_modules/", "dist/", "coverage/", ".env", ".env.*"];
 /** Below this the file was truncated, not edited. */
@@ -73,6 +76,43 @@ export function checkInstalls(path, text) {
     !/^\s*#/.test(line) && NPM_INSTALL.test(line) && !line.includes("--ignore-scripts")
       ? [`${path}:${i + 1} installs with npm without --ignore-scripts, so any dependency's install script runs.`]
       : []);
+}
+
+/**
+ * What each toolchain installs from, and must therefore commit. Go has no entry: a module with
+ * dependencies commits go.sum and one without does not, and `go mod tidy -diff` in verify holds both
+ * to their go.mod.
+ */
+const MODULE_FILES = { node: ["package.json", "package-lock.json"], python: ["pyproject.toml", "uv.lock"], go: ["go.mod"] };
+
+/**
+ * Rule 13. A module whose lockfile is missing still installs — setup.mjs falls back to `npm install`,
+ * which is how a new module's lockfile is first written — but from then on every machine and every CI
+ * run resolves its own dependency tree, and nothing says so. This rule is what makes that fallback
+ * safe to keep: the module cannot be committed without the lockfile the fallback produced.
+ */
+export function checkModules(tracked, read) {
+  const failures = [];
+  for (const module of MODULES) {
+    if (!tracked.some((path) => path.startsWith(`${module.dir}/`))) continue;
+    for (const file of MODULE_FILES[module.toolchain]) {
+      if (!tracked.includes(`${module.dir}/${file}`)) {
+        failures.push(`\`${module.dir}\` is present but does not track \`${file}\`, so it installs a dependency tree nothing pins.`);
+      }
+    }
+    if (module.toolchain !== "node" || !tracked.includes(`${module.dir}/package.json`)) continue;
+    let manifest;
+    // Rule 4 reports a manifest that does not parse; this rule says nothing more about it.
+    try {
+      manifest = JSON.parse(read(`${module.dir}/package.json`));
+    } catch {
+      continue;
+    }
+    if (manifest.scripts?.verify === undefined) {
+      failures.push(`\`${module.dir}/package.json\` has no \`verify\` script, which is the one entry point verify.mjs and its CI job run.`);
+    }
+  }
+  return failures;
 }
 
 export const containsDir = (path, dir) => path === dir || path.startsWith(`${dir}/`) || path.includes(`/${dir}/`);
@@ -237,6 +277,8 @@ export function checkRepoHygiene(root = process.cwd()) {
 
   for (const path of present.filter((p) => WORKFLOW.test(p))) failures.push(...checkWorkflow(path, read(path)));
   for (const path of present.filter((p) => /(^|\/)Dockerfile$/.test(p))) failures.push(...checkInstalls(path, read(path)));
+  failures.push(...checkModules(tracked, read));
+
   const gate = ".github/workflows/verify.yml";
   if (present.includes(gate)) failures.push(...checkGate(gate, read(gate)));
 

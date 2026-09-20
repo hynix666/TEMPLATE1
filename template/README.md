@@ -26,6 +26,8 @@ Strict JSON has no comments, so JSON files carry no markers; a feature that need
 
 **Identity.** The template is a working project under a real identity — owner `hynix666`, repository `TEMPLATE1`, name `template1` — so it verifies green before anyone initializes it. Init replaces those three strings in every text file, through placeholders so no replacement can rewrite another's output. Never write them in a form that should survive initialization.
 
+The three are not interchangeable, and the public contract says where each one lands. `--owner` and `--repo` are the GitHub repository: every link, every badge, and the README title, which is what a reader sees at the top of that repository. `--name` is the project: `package.json` names and the npm scope, which is `@owner/name` lowercased because npm rejects capitals. They differ whenever a repository is named for its deployment and the package for its import, so neither may stand in for the other.
+
 ## Adding a feature
 
 1. Create the module directory, self-contained: its own manifest and lockfile, tests, a `verify` script (or the Go toolchain's checks), and a README.
