@@ -65,7 +65,9 @@ Everything consumers may import is exported from `src/index.ts`; the `exports` m
 The LikeC4 model in `architecture/model/` describes the system. Update it in the same pull request as a structural change. Rules it must satisfy live in `architecture/rules.mjs`, each with a test showing it can fail.
 <!-- ultra:end architecture -->
 
+<!-- ultra:begin go-service|ts-service|py-service -->
 Every task service in this repository answers the same routes with the same status codes and reads the same configuration variables. `scripts/check-contract.mjs` holds each one to the cases in `scripts/contract/tasks-api.json`; change the contract there first, then every service, never one service alone.
+<!-- ultra:end go-service|ts-service|py-service -->
 
 ## Skills
 
