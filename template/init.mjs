@@ -71,11 +71,14 @@ export function validateManifest(manifest, exists) {
   for (const path of manifest.templateOnly) {
     if (!exists(path)) problems.push(`template-only path "${path}" does not exist.`);
   }
-  // A path under two owners is kept or deleted by whichever is processed last, not by the selection.
+  // Several features may own the same path, which is then kept when any of them is selected. A path
+  // INSIDE another feature's path cannot be allowed: the two disagree about a file, and it would be kept
+  // or deleted by whichever path is processed last rather than by the selection.
   const owned = Object.entries(manifest.features).flatMap(([id, feature]) => feature.paths.map((path) => [id, path]));
   for (const [id, path] of owned) {
     for (const [other, outer] of owned) {
-      if ((other !== id || outer !== path) && isUnder(path, outer)) problems.push(`"${path}" is owned by both "${id}" and "${other}".`);
+      if (other === id || path === outer) continue;
+      if (isUnder(path, outer)) problems.push(`"${path}" is inside "${outer}", which "${other}" owns.`);
     }
     if (manifest.templateOnly.some((only) => isUnder(path, only))) problems.push(`"${path}" is owned by "${id}" and is template-only.`);
   }
@@ -122,10 +125,14 @@ export function validateIdentity({ name, owner, repo }) {
   return { name, owner, repo: repo ?? name };
 }
 
-/** Deleted for this selection: each unselected feature's paths, plus everything template-only. */
+/**
+ * Deleted for this selection: each unselected feature's paths, plus everything template-only. A path
+ * several features own belongs to any of them, so it goes only when none of its owners is selected.
+ */
 export function removedPaths(manifest, selected) {
+  const kept = new Set(Object.entries(manifest.features).filter(([id]) => selected.has(id)).flatMap(([, feature]) => feature.paths));
   const unselected = Object.entries(manifest.features).filter(([id]) => !selected.has(id));
-  return [...manifest.templateOnly, ...unselected.flatMap(([, feature]) => feature.paths)];
+  return [...new Set([...manifest.templateOnly, ...unselected.flatMap(([, feature]) => feature.paths).filter((path) => !kept.has(path))])];
 }
 
 export const isUnder = (file, path) => file === path || file.startsWith(`${path}/`);
